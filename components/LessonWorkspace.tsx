@@ -11,122 +11,70 @@ async function postJSON(url: string, body: unknown) {
   return res.json();
 }
 
+// Page order (owner's call): lesson → practice → generated practice → coding
+// exercise → clean quiz at the BOTTOM (the natural end of the flow). The
+// scratchpad + tutor live in the always-available side dock, not here.
 export default function LessonWorkspace({
   lessonCode,
+  lessonTitle,
   exercise,
-  quizBank,
+  practiceQuestions,
+  hasBank,
+  mastered,
 }: {
   lessonCode: string;
+  lessonTitle: string;
   exercise: Exercise;
-  quizBank: QuizQuestion[];
+  practiceQuestions: QuizQuestion[]; // small formative subset (with answers, for instant feedback)
+  hasBank: boolean; // full bank stays server-side — the clean quiz fetches it sans answers
+  mastered: boolean;
 }) {
   const router = useRouter();
+  const hasExercise = Boolean(exercise && exercise.prompt);
+  const hasQuiz = hasBank;
+
   return (
     <>
-      <Scratchpad />
-      <GradedExercise lessonCode={lessonCode} exercise={exercise} onGraded={() => router.refresh()} />
-      <PracticePanel lessonCode={lessonCode} quizBank={quizBank} />
-      <Tutor lessonCode={lessonCode} />
-      <SummativeQuiz lessonCode={lessonCode} quizBank={quizBank} onMastered={() => router.refresh()} />
+      {practiceQuestions.length > 0 && (
+        <div className="panel">
+          <h2>
+            Practice quiz <span className="tag o">FORMATIVE · BATCH-GRADED</span>
+          </h2>
+          <Quiz
+            questions={practiceQuestions}
+            onComplete={(r) => {
+              postJSON("/api/progress", { lessonCode, kind: "QUIZ_PRACTICE", passed: r.score >= 0.7, score: r.score, detail: { questions: r.detail } });
+              router.refresh();
+            }}
+          />
+        </div>
+      )}
+
+      <GeneratePanel lessonCode={lessonCode} onLogged={() => router.refresh()} />
+
+      {hasExercise && <GradedExercise lessonCode={lessonCode} exercise={exercise} onGraded={() => router.refresh()} />}
+
+      {hasQuiz && !mastered && (
+        <CleanQuiz lessonCode={lessonCode} lessonTitle={lessonTitle} onMastered={() => router.refresh()} />
+      )}
+      {mastered && (
+        <div className="panel" style={{ borderColor: "var(--ok)" }}>
+          <h2>
+            Mastered ✓ <span className="tag">CLEAN QUIZ PASSED</span>
+          </h2>
+          <p style={{ fontSize: 14, marginBottom: 0 }}>
+            This topic is locked in. Keep practicing above any time — it can only sharpen your readiness elsewhere.
+          </p>
+        </div>
+      )}
     </>
   );
 }
 
-// ─── Scratchpad ────────────────────────────────────────────────────────────
-function Scratchpad() {
-  const [code, setCode] = useState('String name = input("Your name? ");\nSystem.out.println("Hi, " + name + "!");');
-  const [stdin, setStdin] = useState("Ada");
-  const [out, setOut] = useState("");
-  const [err, setErr] = useState(false);
-  const [busy, setBusy] = useState(false);
-
-  async function run() {
-    setBusy(true);
-    setOut("compiling & running…");
-    setErr(false);
-    const r = await postJSON("/api/run", { code, stdin, wrap: true });
-    setErr(r.compiled === false);
-    setOut(r.compiled === false ? r.error : r.stdout || "(no output)");
-    setBusy(false);
-  }
-
-  return (
-    <div className="panel">
-      <h3>▶ Scratchpad</h3>
-      <CodeEditor value={code} onChange={setCode} />
-      <label className="field" style={{ marginBottom: 8 }}>
-        <span className="l">Standard input <span className="hint">(fed to input() calls)</span></span>
-        <input className="f" value={stdin} onChange={(e) => setStdin(e.target.value)} />
-      </label>
-      <div className="row-btns">
-        <button className="btn primary" onClick={run} disabled={busy}>
-          Run
-        </button>
-      </div>
-      {out && <div className={`output ${err ? "err" : ""}`}>{out}</div>}
-    </div>
-  );
-}
-
-// ─── Graded coding exercise ────────────────────────────────────────────────
-function GradedExercise({ lessonCode, exercise, onGraded }: { lessonCode: string; exercise: Exercise; onGraded: () => void }) {
-  const [code, setCode] = useState(exercise.starter || "");
-  const [busy, setBusy] = useState(false);
-  const [result, setResult] = useState<null | { passed: boolean; feedback: string; stdout: string; error?: string; meta: string; compiled: boolean }>(null);
-
-  async function submit() {
-    setBusy(true);
-    setResult(null);
-    const run = await postJSON("/api/run", { code, stdin: exercise.stdin || "", wrap: true });
-    const grade = await postJSON("/api/ai", {
-      feature: "grade",
-      lessonCode,
-      code,
-      stdout: run.stdout,
-      compiled: run.compiled,
-      error: run.error,
-    });
-    await postJSON("/api/progress", { lessonCode, kind: "CODE_RUN", passed: grade.passed, score: grade.passed ? 1 : 0, detail: { code, stdout: run.stdout } });
-    setResult({ passed: grade.passed, feedback: grade.feedback, stdout: run.stdout, error: run.error, meta: grade.meta, compiled: run.compiled !== false });
-    setBusy(false);
-    onGraded();
-  }
-
-  return (
-    <div className="panel">
-      <h3>✎ Graded exercise</h3>
-      <p style={{ marginTop: 0 }} dangerouslySetInnerHTML={{ __html: exercise.prompt }} />
-      <CodeEditor value={code} onChange={setCode} />
-      <div className="row-btns" style={{ marginTop: 10 }}>
-        <button className="btn primary" onClick={submit} disabled={busy}>
-          {busy ? "running…" : "✓ Run & grade"}
-        </button>
-      </div>
-      {result && (
-        <>
-          <div className="output" style={{ background: "var(--bg)", color: "var(--ink)", border: "1px solid var(--line)" }}>
-            <span className={`verdict ${result.passed ? "ok" : "bad"}`}>
-              {!result.compiled ? "✗ DID NOT COMPILE" : result.passed ? "✓ PASS" : "✗ NOT YET"}
-            </span>
-            <div style={{ marginTop: 6, fontFamily: "var(--sans)", fontSize: 14 }}>{result.feedback}</div>
-          </div>
-          <div className="meta">
-            expected: <code>{exercise.expected}</code> · got: <code>{result.compiled ? result.stdout || "(nothing)" : result.error}</code>
-          </div>
-          <div className="meta">{result.meta}</div>
-          {result.passed && (
-            <div className="meta">Counts toward readiness — only the clean quiz flips this lesson to MASTERED.</div>
-          )}
-        </>
-      )}
-    </div>
-  );
-}
-
-// ─── Practice: static bank + AI-generated ──────────────────────────────────
-function PracticePanel({ lessonCode, quizBank }: { lessonCode: string; quizBank: QuizQuestion[] }) {
+/* ── Generate custom practice ──────────────────────────────────────────── */
+function GeneratePanel({ lessonCode, onLogged }: { lessonCode: string; onLogged: () => void }) {
   const [request, setRequest] = useState("");
-  const [gen, setGen] = useState<{ questions: QuizQuestion[]; note: string } | null>(null);
+  const [gen, setGen] = useState<{ questions: QuizQuestion[]; note: string; provider?: string } | null>(null);
   const [busy, setBusy] = useState(false);
 
   async function generate() {
@@ -137,118 +85,202 @@ function PracticePanel({ lessonCode, quizBank }: { lessonCode: string; quizBank:
     setBusy(false);
   }
 
-  function log(kind: "QUIZ_PRACTICE" | "QUIZ_GENERATED", r: { correct: number; total: number; score: number }) {
-    postJSON("/api/progress", { lessonCode, kind, passed: r.score >= 0.7, score: r.score });
-  }
-
   return (
     <div className="panel">
-      <h3>🎯 Practice</h3>
-      <Quiz questions={quizBank.slice(0, 3)} onComplete={(r) => log("QUIZ_PRACTICE", r)} />
-      <hr style={{ border: "none", borderTop: "1px solid var(--line)", margin: "18px 0" }} />
-      <div className="row-btns">
+      <h2>
+        Generate custom practice <span className="tag ai">AI · STRUCTURED OUTPUT</span>
+      </h2>
+      <p style={{ fontSize: 14 }}>Ask for a fresh set — the tutor sees your record for this topic and targets weak spots.</p>
+      <div className="genrow">
         <input
-          className="f"
-          style={{ flex: 1 }}
-          placeholder="Ask for a targeted set (or leave blank to auto-target weak spots)"
           value={request}
           onChange={(e) => setRequest(e.target.value)}
+          placeholder='e.g. "4 questions on infinite loops" or leave blank for auto-targeted'
+          onKeyDown={(e) => e.key === "Enter" && generate()}
         />
-        <button className="btn" onClick={generate} disabled={busy}>
-          {busy ? "generating…" : "Generate"}
+        <button className="btn purple" onClick={generate} disabled={busy}>
+          {busy ? "generating…" : "✦ Generate set"}
         </button>
       </div>
-      {gen && (
-        <div style={{ marginTop: 14 }}>
-          <div className="meta">{gen.note}</div>
-          <Quiz questions={gen.questions} onComplete={(r) => log("QUIZ_GENERATED", r)} />
+      <div className="genhint">live call → JSON-only output → parsed &amp; rendered → recorded like any attempt</div>
+      {gen?.provider === "stub" && (
+        <div className="offline-note">
+          ⚠ <b>Offline mode</b> — no working AI key. Add a free key in <a href="/admin/settings" style={{ textDecoration: "underline" }}>Settings</a> to enable live generation.
         </div>
       )}
+      {gen && gen.questions.length > 0 && (
+        <div style={{ marginTop: 14 }}>
+          <div className="genhint" style={{ marginBottom: 10 }}>{gen.note}</div>
+          <Quiz
+            questions={gen.questions}
+            onComplete={(r) => {
+              postJSON("/api/progress", { lessonCode, kind: "QUIZ_GENERATED", passed: r.score >= 0.7, score: r.score, detail: { questions: r.detail } });
+              onLogged();
+            }}
+          />
+        </div>
+      )}
+      {gen && gen.questions.length === 0 && <div className="offline-note">Couldn't build a set: {gen.note}</div>}
     </div>
   );
 }
 
-// ─── AI tutor ──────────────────────────────────────────────────────────────
-function Tutor({ lessonCode }: { lessonCode: string }) {
-  const [msgs, setMsgs] = useState<{ role: "u" | "a"; text: string; meta?: string }[]>([]);
-  const [input, setInput] = useState("");
+/* ── Graded coding exercise — rule-based OR AI grading (v4's two modes) ── */
+function GradedExercise({ lessonCode, exercise, onGraded }: { lessonCode: string; exercise: Exercise; onGraded: () => void }) {
+  const [code, setCode] = useState(exercise.starter || "// your code here\n");
+  const [mode, setMode] = useState<"rule" | "ai">("rule");
   const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState<null | { passed: boolean; compiled: boolean; feedback: string; stdout: string; error?: string; meta: string }>(null);
 
-  async function ask(message: string) {
-    if (!message.trim()) return;
-    setMsgs((m) => [...m, { role: "u", text: message }]);
-    setInput("");
+  async function submit() {
     setBusy(true);
-    const r = await postJSON("/api/ai", { feature: "tutor", lessonCode, message });
-    setMsgs((m) => [...m, { role: "a", text: r.text, meta: r.meta }]);
+    setResult(null);
+    const run = await postJSON("/api/run", { code, stdin: exercise.stdin || "", wrap: true });
+    const grade = await postJSON("/api/ai", { feature: "grade", mode, lessonCode, code, stdout: run.stdout, compiled: run.compiled, error: run.error });
+    await postJSON("/api/progress", { lessonCode, kind: "CODE_RUN", passed: grade.passed, score: grade.passed ? 1 : 0, detail: { code, stdout: run.stdout, mode } });
+    setResult({ passed: grade.passed, compiled: run.compiled !== false, feedback: grade.feedback, stdout: run.stdout, error: run.error, meta: grade.meta });
     setBusy(false);
+    onGraded();
   }
 
   return (
     <div className="panel">
-      <h3>💬 AI tutor</h3>
-      {msgs.length > 0 && (
-        <div className="msgs">
-          {msgs.map((m, i) => (
-            <div key={i} className={`msg ${m.role}`}>
-              {m.role === "a" && <span className="who">TUTOR</span>}
-              {m.text}
-              {m.meta && <div className="meta">{m.meta}</div>}
-            </div>
-          ))}
-        </div>
-      )}
-      <div className="ask">
-        <input
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && ask(input)}
-          placeholder="Ask the tutor… (it gives hints, never full solutions)"
-          disabled={busy}
-        />
-        <button className="btn" onClick={() => ask("I'm stuck — a hint please?")} disabled={busy}>
-          Hint
+      <h2>
+        Coding exercise <span className="tag o">FORMATIVE · GRADED</span>
+      </h2>
+      <p dangerouslySetInnerHTML={{ __html: exercise.prompt }} />
+      <div className="modeseg">
+        <button className={mode === "rule" ? "on" : ""} onClick={() => setMode("rule")}>
+          ① Output tests (rule-based)
         </button>
-        <button className="btn primary" onClick={() => ask(input)} disabled={busy}>
-          Ask
+        <button className={mode === "ai" ? "on" : ""} onClick={() => setMode("ai")}>
+          ② AI grader (logic + advice)
         </button>
       </div>
+      <div className="modehint">
+        {mode === "rule"
+          ? "compares your program's exact output to the expected output — instant, no AI used"
+          : "same output check, plus the AI reads your code and coaches you on the logic"}
+      </div>
+      <CodeEditor value={code} onChange={setCode} />
+      <div className="runrow">
+        <button className="btn green" onClick={submit} disabled={busy}>
+          {busy ? "running…" : "✓ Run & grade"}
+        </button>
+        <button className="btn ghost" onClick={() => setCode(exercise.starter || "")}>
+          Reset
+        </button>
+        <span className="runnote">your code runs for real either way — the pass/fail verdict is always the output test</span>
+      </div>
+      {result && (
+        <div className="tests">
+          <div className={`test ${result.passed ? "pass" : "fail"}`}>
+            <span className="mark">{!result.compiled ? "DID NOT COMPILE" : result.passed ? "PASS" : "FAIL"}</span>
+            <div>{!result.compiled ? result.error : result.passed ? "output matches expected" : "output does not match expected"}</div>
+          </div>
+          {result.compiled && (
+            <div className="diff">
+              <div className="box">
+                <h5>Expected</h5>
+                <pre>{exercise.expected || "(none)"}</pre>
+              </div>
+              <div className="box">
+                <h5>Your program printed</h5>
+                <pre>{result.stdout || "(nothing)"}</pre>
+              </div>
+            </div>
+          )}
+          <div className="aigrade">
+            <span className={`verdict ${result.passed ? "ok" : "bad"}`}>{result.passed ? "✓ CORRECT" : "✗ NOT YET"}</span>
+            {result.feedback}
+            <span className="m">{result.meta}</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-// ─── Summative "clean" quiz — the only path to MASTERED ─────────────────────
-function SummativeQuiz({ lessonCode, quizBank, onMastered }: { lessonCode: string; quizBank: QuizQuestion[]; onMastered: () => void }) {
+/* ── Clean quiz (summative) — bottom of the page, the end of the journey.
+     Questions come from the server WITHOUT answers; grading happens on the
+     server; this is the only path that can set MASTERED. ── */
+function CleanQuiz({
+  lessonCode,
+  lessonTitle,
+  onMastered,
+}: {
+  lessonCode: string;
+  lessonTitle: string;
+  onMastered: () => void;
+}) {
   const [open, setOpen] = useState(false);
+  const [attempt, setAttempt] = useState(0);
+  const [questions, setQuestions] = useState<{ q: string; opts: string[] }[] | null>(null);
   const [result, setResult] = useState<null | { passed: boolean; pct: number }>(null);
   const PASS = 0.75;
 
-  async function complete(r: { correct: number; total: number; score: number }) {
-    const passed = r.score >= PASS;
-    await postJSON("/api/progress", { lessonCode, kind: "QUIZ_SUMMATIVE", passed, score: r.score, detail: { summative: true } });
-    setResult({ passed, pct: Math.round(r.score * 100) });
-    if (passed) onMastered();
+  async function start() {
+    setResult(null);
+    setAttempt((a) => a + 1);
+    setOpen(true);
+    setQuestions(null);
+    const r = await fetch(`/api/quiz?lessonCode=${encodeURIComponent(lessonCode)}`).then((x) => x.json());
+    setQuestions(r.questions || []);
+  }
+
+  async function remoteGrade(picks: number[]) {
+    const r = await postJSON("/api/quiz", { lessonCode, picks });
+    if (r.error) return null;
+    setResult({ passed: r.passed, pct: Math.round(r.score * 100) });
+    if (r.passed) {
+      onMastered();
+      setTimeout(() => setOpen(false), 2600);
+    }
+    return { results: r.results };
   }
 
   return (
-    <div className="panel" style={{ borderColor: "var(--violet)" }}>
-      <h3>🔒 Clean quiz (summative)</h3>
-      <p style={{ marginTop: 0, fontSize: 13, color: "var(--muted)" }}>
-        Locked-down check. Passing at {PASS * 100}% is the <b>only</b> thing that sets this lesson to MASTERED.
+    <div className="panel" style={{ borderColor: "var(--accent-2)" }}>
+      <h2>
+        Ready to prove it? <span className="tag o">SUMMATIVE · LOCKED</span>
+      </h2>
+      <p style={{ fontSize: 14 }}>
+        Everything above builds readiness. This is the one thing that sets <b>{lessonTitle}</b> to MASTERED: a clean quiz, no
+        hints, pass ≥ {PASS * 100}%. Retake any time.
       </p>
-      {!open ? (
-        <button className="btn primary" onClick={() => { setOpen(true); setResult(null); }}>
-          Start clean quiz
-        </button>
-      ) : (
-        <>
-          <Quiz questions={quizBank} locked onComplete={complete} />
-          {result && (
-            <div className={`verdict ${result.passed ? "ok" : "bad"}`} style={{ marginTop: 10 }}>
-              {result.passed ? `✓ ${result.pct}% — MASTERED. Sidebar and dashboard update now.` : `✗ ${result.pct}% — below ${PASS * 100}%. Logged; retake anytime.`}
+      <button className="btn orange" onClick={start}>
+        🔒 Start clean quiz → MASTERED
+      </button>
+      {open && (
+        <div className="overlay">
+          <div className="sebwin">
+            <div className="sebbar">
+              <span>🔒 LOCKED-DOWN QUIZ · GRADED ON THE SERVER</span>
+              <span>AI: DISABLED · ATTEMPT {attempt}</span>
             </div>
-          )}
-        </>
+            <div className="sebbody">
+              <h2>Clean Quiz — {lessonTitle}</h2>
+              <p className="sub">Summative. Pass ≥ {PASS * 100}% → MASTERED. Practice never sets Mastered — this does.</p>
+              {questions === null ? (
+                <p style={{ color: "var(--muted)" }}>loading questions…</p>
+              ) : (
+                <Quiz key={attempt} questions={questions} locked submitLabel="Submit clean quiz" remoteGrade={remoteGrade} />
+              )}
+              {result && (
+                <div className={`sebres ${result.passed ? "pass" : "fail"}`}>
+                  {result.passed
+                    ? `✓ ${result.pct}% — ${lessonTitle} → MASTERED. Sidebar and teacher dashboard update now.`
+                    : `✗ ${result.pct}% — below ${PASS * 100}%. Logged; topic stays In Progress. Retake anytime.`}
+                </div>
+              )}
+              <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
+                <button className="btn ghost" onClick={() => setOpen(false)}>
+                  Exit
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

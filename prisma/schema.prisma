@@ -36,31 +36,72 @@ model Lesson {
   goal      String  @default("")
 
   // Ordered array of typed blocks. See lib/curriculum/blocks.ts for the shape.
-  blocks    Json    @default("[]")
+  // No @default: Prisma's Json defaults are broken on SQLite (emits unquoted
+  // `DEFAULT []` -> invalid SQL). Every create site supplies these explicitly.
+  blocks    Json
   // Graded coding exercise: { prompt, starter, expected, behaviour, stdin }
-  exercise  Json    @default("{}")
+  exercise  Json
   // Pool the practice + summative quizzes draw from: [{ q, opts[], correct, why }]
-  quizBank  Json    @default("[]")
+  quizBank  Json
+
+  // Unpublished working copy: { title, goal, blocks, exercise, quizBank }.
+  // Students always read the live fields above; the editor edits this until
+  // the owner hits Publish.
+  draft    Json?
+  draftAt  DateTime?
 
   attempts  Attempt[]
+  versions  LessonVersion[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([chapterId, order])
 }
 
+// Snapshot of the live lesson taken at each publish — the undo history.
+// Restoring copies a snapshot into the draft (never straight to live).
+model LessonVersion {
+  id          String   @id @default(cuid())
+  lesson      Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  lessonId    String
+  snapshot    Json // { title, goal, blocks, exercise, quizBank }
+  publishedAt DateTime @default(now())
+
+  @@index([lessonId, publishedAt])
+}
+
 // ─── People & roles ──────────────────────────────────────────────────────────
 
 // Role: "ADMIN" | "TEACHER" | "STUDENT". Kept as String because SQLite has no
 // native enums; becomes a real Prisma enum when you move to Postgres.
+//
+// Auth model (decided): staff (ADMIN/TEACHER) sign in with email + password.
+// Students have NO email/password — they join a Class with its join code and a
+// display name, Kahoot/ClassDojo-style.
 model User {
-  id        String    @id @default(cuid())
+  id           String    @id @default(cuid())
+  name         String
+  email        String?   @unique // staff only
+  passwordHash String? // scrypt "salt:hash" — staff only
+  role         String    @default("STUDENT")
+  class        Class?    @relation("ClassStudents", fields: [classId], references: [id], onDelete: SetNull)
+  classId      String? // students only
+  classesOwned Class[]   @relation("ClassTeacher") // staff only
+  attempts     Attempt[]
+  aiCalls      AiCall[]
+  createdAt    DateTime  @default(now())
+
+  @@index([classId])
+}
+
+model Class {
+  id        String   @id @default(cuid())
   name      String
-  email     String    @unique
-  role      String    @default("STUDENT")
-  attempts  Attempt[]
-  aiCalls   AiCall[]
-  createdAt DateTime  @default(now())
+  joinCode  String   @unique // what students type to join
+  teacher   User?    @relation("ClassTeacher", fields: [teacherId], references: [id], onDelete: SetNull)
+  teacherId String?
+  students  User[]   @relation("ClassStudents")
+  createdAt DateTime @default(now())
 }
 
 // ─── Tracking (the readiness/mastery engine, now durable) ────────────────────
@@ -76,7 +117,7 @@ model Attempt {
   kind      String
   passed    Boolean
   score     Float    @default(0) // 0..1
-  detail    Json     @default("{}") // per-question results, code, verdict, etc.
+  detail    Json     // per-question results, code, verdict, etc. — always supplied by callers
   createdAt DateTime @default(now())
 
   @@index([userId, lessonId])

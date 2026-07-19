@@ -1,24 +1,69 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
+import { currentUser } from "@/lib/auth";
 import LessonRenderer from "@/components/LessonRenderer";
 import LessonWorkspace from "@/components/LessonWorkspace";
+import SideDock from "@/components/SideDock";
 import type { Block, Exercise, QuizQuestion } from "@/lib/curriculum/blocks";
 
 export default async function LessonPage({ params }: { params: Promise<{ code: string }> }) {
   const { code } = await params;
-  const lesson = await prisma.lesson.findUnique({ where: { code } });
+  const me = await currentUser();
+  if (!me) redirect("/join");
+  const lesson = await prisma.lesson.findUnique({ where: { code }, include: { chapter: true } });
   if (!lesson) notFound();
+
+  const progress = await prisma.progress.findUnique({
+    where: { userId_lessonId: { userId: me.id, lessonId: lesson.id } },
+  });
+  const status = progress?.status ?? "NOT_STARTED";
+  const readiness = Math.round((progress?.readiness ?? 0) * 100);
+  const pill = status === "MASTERED" ? "m" : status === "IN_PROGRESS" ? "p" : "n";
+  const pillText = status === "MASTERED" ? "● MASTERED" : status === "IN_PROGRESS" ? "● IN PROGRESS" : "○ NOT STARTED";
 
   const blocks = lesson.blocks as unknown as Block[];
   const exercise = lesson.exercise as unknown as Exercise;
-  const quizBank = lesson.quizBank as unknown as QuizQuestion[];
+  // Only the small formative subset (with answers) ships to the browser; the
+  // full bank — the clean quiz's answer key — stays server-side (/api/quiz).
+  const bank = (lesson.quizBank as unknown as QuizQuestion[]) || [];
+  const practiceQuestions = bank.slice(0, 3);
+  const hasBank = bank.length > 0;
 
   return (
-    <div className="lesson">
-      <h1>{lesson.title}</h1>
-      <div className="goal" dangerouslySetInnerHTML={{ __html: lesson.goal }} />
-      <LessonRenderer blocks={blocks} />
-      <LessonWorkspace lessonCode={lesson.code} exercise={exercise} quizBank={quizBank} />
-    </div>
+    <>
+      <div className="crumb">
+        {lesson.chapter.title.toUpperCase()} · LESSON {lesson.code}
+      </div>
+      <h1 className="title">{lesson.title}</h1>
+      <div>
+        <span className={`status-pill ${pill}`}>{pillText}</span>
+      </div>
+      <div className="ready">
+        <div className="barwrap">
+          <div className="bar" style={{ width: `${readiness}%` }} />
+        </div>
+        <div className="lbl">
+          readiness {readiness}% — practice, code runs, and generated sets move this bar; only the 🔒 clean quiz sets MASTERED
+        </div>
+      </div>
+
+      <div className="panel lesson">
+        <h2>
+          Lesson <span className="tag k">SET CONTENT — NOT AI</span>
+        </h2>
+        {lesson.goal && <div className="goalbox" dangerouslySetInnerHTML={{ __html: lesson.goal }} />}
+        <LessonRenderer blocks={blocks} />
+      </div>
+
+      <LessonWorkspace
+        lessonCode={lesson.code}
+        lessonTitle={lesson.title}
+        exercise={exercise}
+        practiceQuestions={practiceQuestions}
+        hasBank={hasBank}
+        mastered={status === "MASTERED"}
+      />
+      <SideDock lessonCode={lesson.code} />
+    </>
   );
 }

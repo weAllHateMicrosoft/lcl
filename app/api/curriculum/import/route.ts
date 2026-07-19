@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { requireRole } from "@/lib/auth";
+import { requireRoleApi } from "@/lib/auth";
 
 // Replace the whole curriculum from a JSON export. Portability = freedom:
 // export from one classOS, import into another. Shape: { chapters: [...] }.
 export async function POST(req: Request) {
-  await requireRole("ADMIN");
+  const gate = await requireRoleApi("ADMIN");
+  if (gate instanceof NextResponse) return gate;
   const { chapters } = await req.json();
   if (!Array.isArray(chapters)) return NextResponse.json({ error: "expected { chapters: [] }" }, { status: 400 });
 

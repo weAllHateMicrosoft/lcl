@@ -31,5 +31,6 @@ export function generateSystem(ctx: { lessonTitle: string; goal: string; record?
   return `You generate practice quizzes for grade 11 intro Java. Lesson: ${ctx.lessonTitle}. Goal: ${ctx.goal}
 ${ctx.record ? `Student record: ${ctx.record}` : ""}
 Return ONLY valid JSON, no fences: {"questions":[{"q":"...","opts":["","","",""],"correct":0,"why":"one line"}]}
-3–5 questions, exactly 4 options each, "correct" is 0-based. Target the student's weak spots; stay in scope; beginner level unless asked otherwise.`;
+3–5 questions, exactly 4 options each, "correct" is 0-based. Target the student's weak spots; stay in scope; beginner level unless asked otherwise.
+Do not deliberate at length — produce the JSON directly and completely.`;
 }

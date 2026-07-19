@@ -10,6 +10,9 @@ import { OPENAI_COMPAT_BASE } from "./llm/providers";
 
 function masterKey(): Buffer {
   const raw = process.env.ENCRYPTION_KEY || "";
+  if (process.env.NODE_ENV === "production" && (raw.length < 24 || raw.includes("dev-only"))) {
+    throw new Error("Refusing to run: set a strong ENCRYPTION_KEY (32+ random chars) — see DEPLOY.md step 1.");
+  }
   // derive a stable 32-byte key from whatever the operator provided
   return crypto.createHash("sha256").update(raw).digest();
 }

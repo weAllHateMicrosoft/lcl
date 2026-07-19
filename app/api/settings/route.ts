@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
-import { requireRole } from "@/lib/auth";
+import { requireRoleApi } from "@/lib/auth";
 import { encryptSecret, getStoredLLMConfig, setSetting, type StoredLLMConfig } from "@/lib/settings";
 import type { Feature, Provider } from "@/lib/llm/types";
 
 // Save LLM provider config. Keys are encrypted here and never returned to the
 // client. A blank key field means "keep the existing key".
 export async function POST(req: Request) {
-  await requireRole("ADMIN");
+  const gate = await requireRoleApi("ADMIN");
+  if (gate instanceof NextResponse) return gate;
   const body = await req.json();
   const existing = await getStoredLLMConfig();
 

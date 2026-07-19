@@ -1,10 +1,10 @@
 export default function Forbidden({ need }: { need: string }) {
   return (
     <div className="main">
-      <h1>{need} view</h1>
+      <div className="crumb">ACCESS</div>
+      <h1 className="title" style={{ fontSize: 26 }}>{need} area</h1>
       <div className="notice">
-        You're currently acting as a different role. Use the <b>“acting as”</b> switcher in the top-right to become an{" "}
-        <b>{need}</b>, then this page will load.
+        Your account doesn't have <b>{need}</b> access. Sign out (top right) and sign in with a {need.toLowerCase()} account.
       </div>
     </div>
   );

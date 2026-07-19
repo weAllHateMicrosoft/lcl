@@ -129,7 +129,7 @@ function callStub(args: CompleteArgs): RawResult {
       text = JSON.stringify({
         compiled: true,
         error: "",
-        stdout: "(offline) real Java execution runs via the Piston API",
+        stdout: "(offline) real Java execution runs via the code runner",
       });
   }
   // rough token estimate so cost tracking has something to show

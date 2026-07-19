@@ -19,7 +19,7 @@ const PROVIDERS = [
 ];
 
 const MODEL_HINTS: Record<string, string> = {
-  gemini: "gemini-2.0-flash",
+  gemini: "gemini-3.5-flash",
   groq: "llama-3.3-70b-versatile",
   openrouter: "meta-llama/llama-3.3-70b-instruct:free",
   anthropic: "claude-haiku-4-5",
@@ -104,9 +104,9 @@ export default function SettingsForm({ initial }: { initial: ClientCfg }) {
         </>
       )}
 
-      <div className="row-btns" style={{ marginTop: 16 }}>
-        <button className="btn primary" onClick={save}>Save</button>
-        <button className="btn" onClick={test} disabled={testing}>Test key</button>
+      <div className="runrow" style={{ marginTop: 16 }}>
+        <button className="btn green" onClick={save}>Save</button>
+        <button className="btn ghost" onClick={test} disabled={testing}>Test key</button>
         {status && <span className="meta" style={{ margin: 0 }}>{status}</span>}
       </div>
     </div>

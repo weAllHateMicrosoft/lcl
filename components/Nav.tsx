@@ -3,52 +3,76 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
-type MiniUser = { id: string; name: string; role: string };
+type MiniUser = { id: string; name: string; role: string; className?: string | null };
 
-export default function Nav({ me, users }: { me: MiniUser; users: MiniUser[] }) {
+export default function Nav({ me, cost }: { me: MiniUser | null; cost: { total: number; calls: number } | null }) {
   const path = usePathname();
   const router = useRouter();
-  const is = (p: string) => (path === p || path.startsWith(p + "/") ? "active" : "");
+  const on = (p: string) => (path === p || path.startsWith(p + "/") ? "on" : "");
 
-  async function switchUser(id: string) {
-    await fetch("/api/user", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId: id }) });
+  async function logout() {
+    await fetch("/api/auth/logout", { method: "POST" });
+    router.push("/login");
     router.refresh();
   }
 
   return (
-    <nav className="nav">
-      <Link href="/" className="brand">
-        class<span>OS</span>
+    <div className="topbar">
+      <Link href="/" className="logo">
+        class<em>OS</em>
       </Link>
-      <Link href="/lessons" className={is("/lessons")}>
-        Lessons
-      </Link>
-      {(me.role === "TEACHER" || me.role === "ADMIN") && (
-        <Link href="/teacher" className={is("/teacher")}>
-          Teacher
-        </Link>
-      )}
-      {me.role === "ADMIN" && (
-        <>
-          <Link href="/admin/editor" className={is("/admin/editor")}>
-            Editor
-          </Link>
-          <Link href="/admin/settings" className={is("/admin/settings")}>
-            Settings
-          </Link>
-        </>
-      )}
+      <div className="proto">SELF-HOSTED</div>
       <div className="spacer" />
-      <div className="rolebar">
-        <span>acting as</span>
-        <select value={me.id} onChange={(e) => switchUser(e.target.value)} title="Dev role switcher (replaced by Auth.js later)">
-          {users.map((u) => (
-            <option key={u.id} value={u.id}>
-              {u.name} · {u.role}
-            </option>
-          ))}
-        </select>
-      </div>
-    </nav>
+      {me ? (
+        <>
+          {cost && (
+            <div className="costbadge">
+              AI cost: ${cost.total.toFixed(5)} · {cost.calls} calls
+            </div>
+          )}
+          <div className="modelbox" title={me.className ? `Class: ${me.className}` : undefined}>
+            {me.role}
+            <span style={{ color: "#e9e4d8", fontFamily: "var(--sans)", fontWeight: 600, fontSize: 13 }}>{me.name}</span>
+          </div>
+          <nav className="viewswitch">
+            <Link href="/lessons" className={on("/lessons")}>
+              {me.role === "STUDENT" ? "My lessons" : "Student view"}
+            </Link>
+            {(me.role === "TEACHER" || me.role === "ADMIN") && (
+              <Link href="/teacher" className={on("/teacher")}>
+                Teacher
+              </Link>
+            )}
+            {me.role === "ADMIN" && (
+              <>
+                <Link href="/admin/editor" className={on("/admin/editor")}>
+                  Editor
+                </Link>
+                <Link href="/admin/settings" className={on("/admin/settings")}>
+                  Settings
+                </Link>
+              </>
+            )}
+          </nav>
+          {me.role !== "STUDENT" && (
+            <Link href="/account" className="tbtn" style={{ textDecoration: "none" }}>
+              Account
+            </Link>
+          )}
+          <button className="tbtn" onClick={logout}>
+            Sign out
+          </button>
+        </>
+      ) : (
+        <nav className="viewswitch">
+          <Link href="/join" className={on("/join")}>
+            Join class
+          </Link>
+          <Link href="/login" className={on("/login")}>
+            Staff sign-in
+          </Link>
+        </nav>
+      )}
+    </div>
   );
 }

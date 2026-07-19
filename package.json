@@ -8,10 +8,12 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "postinstall": "prisma generate",
     "db:push": "prisma db push",
     "db:seed": "prisma db seed",
     "db:reset": "prisma db push --force-reset && prisma db seed",
     "db:studio": "prisma studio",
+    "import:lessons": "node scripts/import-lessons.mjs",
     "setup": "prisma generate && prisma db push && prisma db seed"
   },
   "prisma": {

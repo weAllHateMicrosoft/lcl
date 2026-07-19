@@ -1,15 +1,21 @@
-import { canRole } from "@/lib/auth";
+import { redirect } from "next/navigation";
+import { currentUser } from "@/lib/auth";
 import { getLLMConfigForClient } from "@/lib/settings";
 import SettingsForm from "@/components/SettingsForm";
 import Forbidden from "@/components/Forbidden";
 
 export default async function SettingsPage() {
-  if (!(await canRole("ADMIN"))) return <Forbidden need="Admin" />;
+  const me = await currentUser();
+  if (!me) redirect("/login");
+  if (me.role !== "ADMIN") return <Forbidden need="Admin" />;
   const cfg = await getLLMConfigForClient();
   return (
     <div className="main">
-      <h1>AI provider settings</h1>
-      <p className="goal">Bring your own key. Swap providers here — no redeploy. The app runs offline (stub) until you add one.</p>
+      <div className="crumb">ADMIN · AI PROVIDER</div>
+      <h1 className="title" style={{ marginBottom: 6 }}>Settings</h1>
+      <p style={{ color: "var(--muted)", marginBottom: 10 }}>
+        Bring your own key. Swap providers here — no redeploy. The app runs offline (canned responses) until you add one.
+      </p>
       <SettingsForm initial={cfg} />
     </div>
   );

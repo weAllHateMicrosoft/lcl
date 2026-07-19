@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireRole } from "@/lib/auth";
+import { requireRoleApi } from "@/lib/auth";
 import { callProvider, OPENAI_COMPAT_BASE } from "@/lib/llm/providers";
 import { getProviderConfig } from "@/lib/settings";
 import type { Provider } from "@/lib/llm/types";
@@ -7,7 +7,8 @@ import type { Provider } from "@/lib/llm/types";
 // One-token ping to confirm a key + model work before students hit them.
 // If apiKey is blank, tests the currently-saved key.
 export async function POST(req: Request) {
-  await requireRole("ADMIN");
+  const gate = await requireRoleApi("ADMIN");
+  if (gate instanceof NextResponse) return gate;
   const body = await req.json();
 
   let provider = body.provider as Provider;

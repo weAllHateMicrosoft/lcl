@@ -1,7 +1,19 @@
+import { existsSync, readFileSync } from "node:fs";
+import crypto from "node:crypto";
 import { PrismaClient } from "@prisma/client";
 import type { Block, Exercise, QuizQuestion } from "../lib/curriculum/blocks";
 
 const prisma = new PrismaClient();
+
+// Same scrypt format as lib/auth.ts (duplicated here because the seed runs
+// under tsx without the Next.js "server-only" context).
+function hashPassword(password: string): string {
+  const salt = crypto.randomBytes(16).toString("hex");
+  return `${salt}:${crypto.scryptSync(password, salt, 64).toString("hex")}`;
+}
+
+// If `npm run import:lessons` has produced this, we seed all 15 real lessons.
+const SEED_JSON = "prisma/curriculum.seed.json";
 
 type SeedLesson = {
   code: string;
@@ -115,7 +127,7 @@ const UNIT2: SeedLesson[] = [
   },
 ];
 
-const DEMO_STUDENTS = ["Ada Lovelace", "Grace Hopper", "Alan Turing", "Katherine Johnson", "Linus Torvalds", "You (demo)"];
+const DEMO_STUDENTS = ["Ada Lovelace", "Grace Hopper", "Alan Turing", "Katherine Johnson", "Linus Torvalds"];
 
 async function main() {
   console.log("Seeding classOS…");
@@ -127,33 +139,71 @@ async function main() {
   await prisma.lesson.deleteMany();
   await prisma.chapter.deleteMany();
   await prisma.user.deleteMany();
+  await prisma.class.deleteMany();
 
-  const chapter = await prisma.chapter.create({ data: { order: 2, title: "Unit 2 — Basic Java" } });
+  // Exercises + quiz banks I authored for these 4 lessons — merged onto the
+  // imported bodies so the graded exercise and clean quiz keep working.
+  const EXTRAS: Record<string, { exercise: Exercise; quizBank: QuizQuestion[] }> = Object.fromEntries(
+    UNIT2.map((l) => [l.code, { exercise: l.exercise, quizBank: l.quizBank }])
+  );
 
-  for (let i = 0; i < UNIT2.length; i++) {
-    const l = UNIT2[i];
-    await prisma.lesson.create({
-      data: {
-        chapterId: chapter.id,
-        code: l.code,
-        order: i,
-        title: l.title,
-        goal: l.goal,
-        blocks: l.blocks as any,
-        exercise: l.exercise as any,
-        quizBank: l.quizBank as any,
-      },
-    });
+  const chapters: any[] = existsSync(SEED_JSON)
+    ? JSON.parse(readFileSync(SEED_JSON, "utf8")).chapters
+    : [{ order: 2, title: "Unit 2 — Basic Java", lessons: UNIT2 }];
+
+  let lessonCount = 0;
+  for (const c of chapters) {
+    const chapter = await prisma.chapter.create({ data: { order: c.order ?? 2, title: c.title } });
+    const ls = c.lessons ?? [];
+    for (let i = 0; i < ls.length; i++) {
+      const l = ls[i];
+      const extra = EXTRAS[l.code] || {};
+      const exercise = l.exercise && Object.keys(l.exercise).length ? l.exercise : extra.exercise ?? {};
+      const quizBank = l.quizBank && l.quizBank.length ? l.quizBank : extra.quizBank ?? [];
+      await prisma.lesson.create({
+        data: {
+          chapterId: chapter.id,
+          code: l.code,
+          order: l.order ?? i,
+          title: l.title,
+          goal: l.goal ?? "",
+          blocks: l.blocks as any,
+          exercise: exercise as any,
+          quizBank: quizBank as any,
+        },
+      });
+      lessonCount++;
+    }
   }
 
-  await prisma.user.create({ data: { name: "Owner (Admin)", email: "admin@classos.dev", role: "ADMIN" } });
-  await prisma.user.create({ data: { name: "Ms. Rivera (Teacher)", email: "teacher@classos.dev", role: "TEACHER" } });
+  // No public defaults: unless overridden, passwords are random per-seed and
+  // printed below. (A fixed default in a public README = free admin access.)
+  const genPw = () => crypto.randomBytes(9).toString("base64url");
+  const adminPw = process.env.ADMIN_PASSWORD || genPw();
+  const teacherPw = process.env.TEACHER_PASSWORD || genPw();
+
+  await prisma.user.create({
+    data: { name: "Owner", email: "admin@classos.dev", role: "ADMIN", passwordHash: hashPassword(adminPw) },
+  });
+  const teacher = await prisma.user.create({
+    data: { name: "Ms. Rivera", email: "teacher@classos.dev", role: "TEACHER", passwordHash: hashPassword(teacherPw) },
+  });
+
+  const demoClass = await prisma.class.create({
+    data: { name: "Period 3 — Intro Java", joinCode: "JAVA26", teacherId: teacher.id },
+  });
   for (const name of DEMO_STUDENTS) {
-    const email = name.toLowerCase().replace(/[^a-z]/g, "") + "@classos.dev";
-    await prisma.user.create({ data: { name, email, role: "STUDENT" } });
+    await prisma.user.create({ data: { name, role: "STUDENT", classId: demoClass.id } });
   }
 
-  console.log(`Seeded ${UNIT2.length} lessons and ${DEMO_STUDENTS.length + 2} users.`);
+  console.log(`Seeded ${lessonCount} lessons, 1 class, ${DEMO_STUDENTS.length + 2} users.`);
+  console.log("");
+  console.log("── Sign-in details (SAVE THESE — passwords are random) ──");
+  console.log(`  Admin:    admin@classos.dev / ${adminPw}`);
+  console.log(`  Teacher:  teacher@classos.dev / ${teacherPw}`);
+  console.log(`  Students: join code JAVA26 + any name (at /join)`);
+  console.log("  You can change passwords any time at /account.");
+  console.log("─────────────────────────────────────────────────────────");
 }
 
 main()

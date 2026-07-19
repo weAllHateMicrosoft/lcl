@@ -1,8 +1,8 @@
 import type { Block } from "@/lib/curriculum/blocks";
 
-// The single renderer for lesson content. The student reader and the admin
-// editor's live preview both use this — one source of truth for how a lesson
-// looks. (HTML in prose/callout comes from the trusted CMS, authored by staff.)
+// The single renderer for lesson content — used by the student reader AND the
+// editor's live preview. Styles ported from the prototypes (lesson body +
+// editor .pv). HTML in prose/callouts is trusted CMS content authored by staff.
 export default function LessonRenderer({ blocks }: { blocks: Block[] }) {
   return (
     <div className="lesson-body">
@@ -21,15 +21,15 @@ function BlockView({ block: b }: { block: Block }) {
       return <p dangerouslySetInnerHTML={{ __html: b.html }} />;
     case "code":
       return (
-        <>
-          <pre className="codeblock">{b.code}</pre>
+        <div className="codeblock">
+          <pre>{b.code}</pre>
           {b.out !== undefined && b.out !== "" && (
-            <div className="codeout">
-              <span className="lbl">Output</span>
+            <div className="out">
+              <span className="lbl">OUTPUT</span>
               {b.out}
             </div>
           )}
-        </>
+        </div>
       );
     case "callout": {
       const icon = b.kind === "mistake" ? "⚠" : b.kind === "tip" ? "✓" : "◆";
@@ -66,8 +66,8 @@ function BlockView({ block: b }: { block: Block }) {
       );
     case "exercise":
       return (
-        <div className="exercise">
-          <div className="ch">✎ Exercise</div>
+        <div className="tryit">
+          <div className="ch">✎ Try it</div>
           <p dangerouslySetInnerHTML={{ __html: b.html }} />
           {b.meta && <div className="meta">{b.meta}</div>}
         </div>

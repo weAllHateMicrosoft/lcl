@@ -94,7 +94,7 @@ export async function POST(req: Request) {
     );
     // Coerce `correct` (models often return it as a string) then keep any
     // well-formed MCQ (2–6 options, valid answer index).
-    let questions = (r.data?.questions || [])
+    let questions: QuizQuestion[] = (r.data?.questions || [])
       .map((q) => ({ ...q, correct: Number(q.correct) }))
       .filter(
         (q) =>

@@ -293,7 +293,7 @@ export default function Editor() {
                     <div className="blktools">
                       <button className="grip" title="Drag to move" onMouseDown={() => setArmed(i)}>⠿</button>
                       {wb.b.type === "callout" && (
-                        <select value={wb.b.kind} onChange={(e) => setBlock(i, { ...wb.b, kind: e.target.value as any })}>
+                        <select value={wb.b.kind} onChange={(e) => setBlock(i, { ...wb.b, kind: e.target.value } as Block)}>
                           <option value="mistake">⚠</option>
                           <option value="tip">✓</option>
                           <option value="note">◆</option>

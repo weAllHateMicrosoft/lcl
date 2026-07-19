@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>classOS — Lesson Editor (Admin)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,700;9..144,900&family=Public+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{--ink:#1a1c1e;--paper:#f7f5f0;--accent:#0d5c46;--accent-2:#e0532f;--line:#d8d3c8;--muted:#6b6f66;--card:#fff;--ok:#0d5c46;--violet:#5b5f9e;--amber:#c98a10}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Public Sans',sans-serif;background:var(--paper);color:var(--ink);line-height:1.55;font-size:15px}
+  button{font-family:inherit;cursor:pointer}
+  .topbar{background:var(--ink);color:var(--paper);display:flex;align-items:center;gap:14px;padding:11px 20px;position:sticky;top:0;z-index:30}
+  .topbar .logo{font-family:'Fraunces',serif;font-weight:900;font-size:17px}
+  .topbar .logo em{color:#7fd6b8;font-style:normal}
+  .topbar .badge{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.12em;color:#1a1c1e;background:#e0a03f;border-radius:99px;padding:3px 10px;font-weight:700}
+  .topbar .spacer{flex:1}
+  .topbar .save{font-family:'JetBrains Mono',monospace;font-size:11px;color:#7fd6b8}
+  .seg{display:flex;border:1px solid #4a4d47;border-radius:9px;overflow:hidden}
+  .seg button{background:transparent;color:#b9bcb2;border:none;padding:7px 15px;font-size:13px;font-weight:600}
+  .seg button.on{background:var(--paper);color:var(--ink)}
+  .tbtn{background:#2a2d2b;color:#e9e4d8;border:1px solid #4a4d47;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:600}
+  .tbtn:hover{background:#33372f}
+  .shell{display:flex}
+  .nav{width:262px;flex-shrink:0;border-right:1.5px solid var(--line);background:#f1eee6;height:calc(100vh - 51px);overflow-y:auto;position:sticky;top:51px;padding:16px 12px}
+  .chap{margin-bottom:14px}
+  .chaphead{display:flex;align-items:center;gap:6px;padding:0 6px 6px}
+  .chaphead input{flex:1;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);background:transparent;border:none;font-weight:700}
+  .chaphead input:focus{outline:1px solid var(--accent);border-radius:4px;background:#fff}
+  .lrow{display:flex;gap:8px;align-items:center;width:100%;text-align:left;background:transparent;border:1.5px solid transparent;border-radius:8px;padding:8px 9px;font-size:13.5px;font-weight:500;color:var(--ink);cursor:pointer}
+  .lrow:hover{background:#e9e5da}
+  .lrow.on{background:var(--card);border-color:var(--ink);box-shadow:2px 2px 0 rgba(26,28,30,.1);font-weight:700}
+  .lrow .num{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--accent);font-weight:600}
+  .addbtn{width:100%;text-align:left;background:transparent;border:1px dashed var(--line);border-radius:8px;padding:7px 10px;font-size:12.5px;color:var(--muted);margin-top:3px}
+  .addbtn:hover{border-color:var(--accent);color:var(--accent)}
+  .main{flex:1;max-width:860px;margin:0 auto;padding:26px 34px 120px}
+  .lhead{display:flex;gap:10px;margin-bottom:8px}
+  .lhead .code{width:70px}
+  .lhead input{border:1.5px solid var(--line);border-radius:8px;padding:9px 12px;font-family:inherit;background:#fff}
+  .lhead .title{flex:1;font-family:'Fraunces',serif;font-weight:700;font-size:20px}
+  .goalin{width:100%;border:1.5px solid var(--line);border-radius:8px;padding:9px 12px;font-family:inherit;font-size:14px;background:#fff;margin-bottom:18px}
+  /* block editor cards */
+  .blk{border:1.5px solid var(--line);border-radius:12px;margin-bottom:12px;background:#fff;overflow:hidden}
+  .blk .bh{display:flex;align-items:center;gap:8px;background:#f1eee6;padding:6px 10px;border-bottom:1px solid var(--line)}
+  .blk .bh .kind{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;color:var(--muted)}
+  .blk .bh .sp{flex:1}
+  .blk .bh button{background:#fff;border:1px solid var(--line);border-radius:6px;width:26px;height:24px;font-size:12px;color:var(--muted);display:inline-flex;align-items:center;justify-content:center}
+  .blk .bh button:hover{border-color:var(--ink);color:var(--ink)}
+  .blk .bh button.del:hover{border-color:var(--accent-2);color:var(--accent-2)}
+  .blk .bb{padding:12px 14px}
+  .blk textarea,.blk input.f{width:100%;border:1px solid var(--line);border-radius:8px;padding:9px 11px;font-family:inherit;font-size:14px;background:#fdfcf9;resize:vertical}
+  .blk textarea.mono{font-family:'JetBrains Mono',monospace;font-size:13px;background:#1e211f;color:#dfe6db;border:none;min-height:90px;line-height:1.55}
+  .blk .lbl{font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:8px 0 4px}
+  .blk .lbl:first-child{margin-top:0}
+  .blk select{border:1px solid var(--line);border-radius:7px;padding:6px 9px;font-family:inherit;font-size:13px;background:#fff}
+  /* add-block bar */
+  .addbar{display:flex;gap:7px;flex-wrap:wrap;margin:16px 0;padding:14px;border:1.5px dashed var(--accent);border-radius:12px;background:#fbfdfb}
+  .addbar .lbl{width:100%;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin-bottom:2px}
+  .addbar button{border:1.5px solid var(--ink);background:#fff;border-radius:8px;padding:7px 13px;font-size:12.5px;font-weight:600}
+  .addbar button:hover{background:var(--ink);color:var(--paper)}
+  /* preview */
+  .pv h1{font-family:'Fraunces',serif;font-weight:900;font-size:30px;margin-bottom:8px;line-height:1.1}
+  .pv .goal{font-size:16px;margin-bottom:22px;padding:12px 16px;background:#e7f2ec;border-left:4px solid var(--accent);border-radius:0 8px 8px 0}
+  .pv h2{font-family:'Fraunces',serif;font-weight:700;font-size:21px;margin:26px 0 10px;padding-bottom:5px;border-bottom:2px solid var(--line)}
+  .pv p{margin-bottom:13px;font-size:16px}
+  .pv .codeblock{margin:14px 0;border-radius:10px;overflow:hidden;border:1.5px solid #2a2d25}
+  .pv pre{font-family:'JetBrains Mono',monospace;font-size:13.5px;background:#1e211f;color:#dfe6db;padding:14px 16px;overflow-x:auto;line-height:1.55;margin:0}
+  .pv pre .kw{color:#8fd6b4}.pv pre .ty{color:#7fb0e0}.pv pre .st{color:#e8b26a}.pv pre .cm{color:#7d857c;font-style:italic}.pv pre .nm{color:#e0906a}
+  .pv .out{background:#0f120d;color:#b7d3ad;font-family:'JetBrains Mono',monospace;font-size:12.5px;padding:9px 16px;border-top:1px dashed #2a2d25;white-space:pre-wrap}
+  .pv .callout{border-radius:10px;padding:14px 18px;margin:16px 0;border-left:4px solid}
+  .pv .callout .ch{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:700;margin-bottom:6px}
+  .pv .callout.mistake{background:#f9ebe7;border-color:var(--accent-2)}.pv .callout.mistake .ch{color:var(--accent-2)}
+  .pv .callout.tip{background:#e7f2ec;border-color:var(--accent)}.pv .callout.tip .ch{color:var(--accent)}
+  .pv .callout.note{background:#eef0f7;border-color:var(--violet)}.pv .callout.note .ch{color:var(--violet)}
+  .pv .tryit{border:1.5px solid var(--ink);border-radius:10px;padding:14px 18px;margin:18px 0;background:#fff}
+  .pv .tryit .ch{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent-2);margin-bottom:6px}
+  .modalbg{position:fixed;inset:0;background:rgba(26,28,30,.6);display:none;align-items:center;justify-content:center;z-index:40;padding:20px}
+  .modal{background:var(--paper);border:2px solid var(--ink);border-radius:14px;max-width:560px;width:100%;max-height:85vh;overflow:auto;padding:22px 24px}
+  .modal h3{font-family:'Fraunces',serif;font-size:20px;margin-bottom:10px}
+  .modal textarea{width:100%;min-height:200px;font-family:'JetBrains Mono',monospace;font-size:11.5px;border:1.5px solid var(--line);border-radius:8px;padding:10px}
+  .modal .row{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
+  .btn{border:1.5px solid var(--ink);background:var(--ink);color:var(--paper);border-radius:9px;padding:9px 16px;font-size:13px;font-weight:700}
+  .btn.ghost{background:transparent;color:var(--ink)}
+  @media(max-width:820px){.nav{display:none}.main{padding:20px}}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="logo">class<em>OS</em></div>
+  <div class="badge">ADMIN · LESSON EDITOR</div>
+  <div class="spacer"></div>
+  <span class="save" id="saveState">saved</span>
+  <button class="tbtn" onclick="exportJSON()">Export JSON</button>
+  <button class="tbtn" onclick="importJSON()">Import</button>
+  <button class="tbtn" onclick="resetAll()">Reset demo</button>
+  <div class="seg"><button id="segEdit" class="on" onclick="setMode('edit')">Edit</button><button id="segPrev" onclick="setMode('preview')">Preview</button></div>
+</div>
+<div class="shell">
+  <nav class="nav" id="nav"></nav>
+  <main class="main" id="main"></main>
+</div>
+
+<div class="modalbg" id="modalbg"><div class="modal">
+  <h3 id="modalTitle">Data</h3>
+  <textarea id="modalText"></textarea>
+  <div class="row"><button class="btn ghost" onclick="closeModal()">Close</button><button class="btn" id="modalOk" onclick="closeModal()">OK</button></div>
+</div></div>
+
+<script>
+/* =========================================================================
+   LESSON EDITOR — demonstrates the CMS / "freedom to edit" layer.
+   Curriculum is a tree of chapters -> lessons -> blocks, persisted in
+   window.storage (per-user). In the real platform this same tree lives in
+   Postgres and this exact editor UI writes to it via the admin API.
+   ========================================================================= */
+const BLOCK_KINDS = {
+  h:      {label:"Heading"},
+  p:      {label:"Text"},
+  code:   {label:"Code + output"},
+  callout:{label:"Callout"},
+  try:    {label:"Exercise"},
+};
+function seed(){return {chapters:[
+  {id:"ch1", title:"Chapter 1 · Basic Java", lessons:[
+    {id:"l1", code:"2.10", title:"While Loops",
+     goal:"Repeat code an <b>unknown</b> number of times — as long as a condition stays true.",
+     blocks:[
+       {type:"p", html:"A <strong>while</strong> loop repeats a block <em>as long as a condition is true</em>. Use it when you don't know in advance how many repetitions you need."},
+       {type:"code", code:'int count = 0;\nwhile (count < 3) {\n    System.out.println("Hello!");\n    count++;\n}', out:"Hello!\nHello!\nHello!"},
+       {type:"callout", kind:"mistake", title:"The infinite loop", html:"If nothing inside the loop moves the condition toward false, it runs forever. The classic cause is forgetting the update line."},
+       {type:"try", html:"Read an integer n and print n down to 1 using a while loop.", meta:"stdin: one integer"}
+     ]},
+    {id:"l2", code:"2.11", title:"If Statements",
+     goal:"Make decisions with <b>if</b>, <b>else if</b>, and <b>else</b>.",
+     blocks:[{type:"p", html:"An <strong>if statement</strong> lets a program choose what to do based on a condition."}]}
+  ]}
+]};}
+
+let data, mode='edit', sel={c:0,l:0}, dirty=false;
+
+/* ---------- persistence (window.storage; falls back to memory) ---------- */
+async function load(){
+  try{ const r=await window.storage.get('curriculum'); data = r? JSON.parse(r.value) : seed(); }
+  catch(e){ data = seed(); }
+  render();
+}
+async function save(){
+  dirty=true; document.getElementById('saveState').textContent='saving…';
+  try{ await window.storage.set('curriculum', JSON.stringify(data)); document.getElementById('saveState').textContent='saved ✓'; }
+  catch(e){ document.getElementById('saveState').textContent='saved (memory only)'; }
+}
+function touch(){ save(); }
+
+/* ---------- helpers ---------- */
+const curLesson=()=>data.chapters[sel.c].lessons[sel.l];
+function uid(){return 'x'+Math.random().toString(36).slice(2,8);}
+
+/* ---------- nav ---------- */
+function render(){ buildNav(); mode==='edit'?renderEdit():renderPreview();
+  document.getElementById('segEdit').classList.toggle('on',mode==='edit');
+  document.getElementById('segPrev').classList.toggle('on',mode==='preview'); }
+function buildNav(){
+  let h='';
+  data.chapters.forEach((ch,ci)=>{
+    h+=`<div class="chap"><div class="chaphead"><input value="${escAttr(ch.title)}" onchange="renameChapter(${ci}, this.value)"></div>`;
+    ch.lessons.forEach((L,li)=>{ h+=`<button class="lrow ${ci===sel.c&&li===sel.l?'on':''}" onclick="pick(${ci},${li})"><span class="num">${escHtml(L.code)}</span><span>${escHtml(L.title)}</span></button>`; });
+    h+=`<button class="addbtn" onclick="addLesson(${ci})">+ add lesson</button></div>`;
+  });
+  h+=`<button class="addbtn" style="border-style:solid;font-weight:600" onclick="addChapter()">+ add chapter</button>`;
+  document.getElementById('nav').innerHTML=h;
+}
+function pick(c,l){ sel={c,l}; render(); }
+function addChapter(){ data.chapters.push({id:uid(),title:"New Chapter",lessons:[{id:uid(),code:"0.0",title:"New Lesson",goal:"",blocks:[]}]}); sel={c:data.chapters.length-1,l:0}; touch(); render(); }
+function renameChapter(ci,v){ data.chapters[ci].title=v; touch(); }
+function addLesson(ci){ data.chapters[ci].lessons.push({id:uid(),code:"0.0",title:"New Lesson",goal:"",blocks:[]}); sel={c:ci,l:data.chapters[ci].lessons.length-1}; touch(); render(); }
+
+/* ---------- edit mode ---------- */
+function renderEdit(){
+  const L=curLesson();
+  let h=`<div class="lhead">
+    <input class="code" value="${escAttr(L.code)}" onchange="setField('code',this.value)" placeholder="2.1">
+    <input class="title" value="${escAttr(L.title)}" onchange="setField('title',this.value)" placeholder="Lesson title">
+  </div>
+  <input class="goalin" value="${escAttr(L.goal)}" onchange="setField('goal',this.value)" placeholder="Goal: by the end you can…  (HTML allowed, e.g. <b>bold</b>)">`;
+  L.blocks.forEach((b,i)=>{ h+=blockEditor(b,i,L.blocks.length); });
+  h+=`<div class="addbar"><span class="lbl">Insert a block</span>${Object.entries(BLOCK_KINDS).map(([k,v])=>`<button onclick="addBlock('${k}')">+ ${v.label}</button>`).join('')}</div>`;
+  document.getElementById('main').innerHTML=h;
+}
+function blockEditor(b,i,n){
+  let inner='';
+  if(b.type==='h') inner=`<input class="f" value="${escAttr(b.text||'')}" oninput="upd(${i},'text',this.value)" placeholder="Section heading">`;
+  else if(b.type==='p') inner=`<textarea rows="3" oninput="upd(${i},'html',this.value)" placeholder="Paragraph text — HTML allowed (<strong>, <code>, <em>)">${escHtml(b.html||'')}</textarea>`;
+  else if(b.type==='code') inner=`<div class="lbl">Java code</div><textarea class="mono" oninput="upd(${i},'code',this.value)" placeholder="int x = 5;">${escHtml(b.code||'')}</textarea><div class="lbl">Expected output (optional)</div><textarea class="mono" style="min-height:50px" oninput="upd(${i},'out',this.value)" placeholder="program output">${escHtml(b.out||'')}</textarea>`;
+  else if(b.type==='callout') inner=`<div class="lbl">Style</div><select onchange="upd(${i},'kind',this.value)"><option value="mistake" ${b.kind==='mistake'?'selected':''}>⚠ Common mistake</option><option value="tip" ${b.kind==='tip'?'selected':''}>✓ Tip</option><option value="note" ${b.kind==='note'?'selected':''}>◆ Note</option></select><div class="lbl">Title</div><input class="f" value="${escAttr(b.title||'')}" oninput="upd(${i},'title',this.value)"><div class="lbl">Body</div><textarea rows="2" oninput="upd(${i},'html',this.value)">${escHtml(b.html||'')}</textarea>`;
+  else if(b.type==='try') inner=`<div class="lbl">Exercise prompt</div><textarea rows="2" oninput="upd(${i},'html',this.value)">${escHtml(b.html||'')}</textarea><div class="lbl">Meta (stdin / checks)</div><input class="f" value="${escAttr(b.meta||'')}" oninput="upd(${i},'meta',this.value)" placeholder="stdin: one integer · checks: prints n..1">`;
+  return `<div class="blk"><div class="bh"><span class="kind">${BLOCK_KINDS[b.type].label}</span><span class="sp"></span>
+    <button ${i===0?'disabled':''} onclick="move(${i},-1)" title="up">↑</button>
+    <button ${i===n-1?'disabled':''} onclick="move(${i},1)" title="down">↓</button>
+    <button class="del" onclick="delBlock(${i})" title="delete">✕</button></div>
+    <div class="bb">${inner}</div></div>`;
+}
+function setField(f,v){ curLesson()[f]=v; touch(); if(f==='title'||f==='code')buildNav(); }
+function upd(i,f,v){ curLesson().blocks[i][f]=v; touch(); }
+function addBlock(type){ const b={type}; if(type==='callout')b.kind='mistake'; curLesson().blocks.push(b); touch(); renderEdit(); }
+function delBlock(i){ curLesson().blocks.splice(i,1); touch(); renderEdit(); }
+function move(i,d){ const b=curLesson().blocks; [b[i],b[i+d]]=[b[i+d],b[i]]; touch(); renderEdit(); }
+
+/* ---------- preview mode (mirrors the student reader) ---------- */
+function esc(s){return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function escHtml(s){return esc(s);} function escAttr(s){return esc(s).replace(/"/g,'&quot;');}
+function highlight(raw){let s=esc(raw);const store=[];const stash=(c,t)=>{store.push(`<span class="${c}">${t}</span>`);return `\u0000${store.length-1}\u0000`;};
+  s=s.replace(/\/\/[^\n]*/g,m=>stash('cm',m));
+  s=s.replace(/&quot;(?:[^&]|&(?!quot;))*?&quot;/g,m=>stash('st',m));
+  s=s.replace(/\b(public|private|static|void|class|new|return|if|else|while|for|break|continue|import|true|false|null)\b/g,'<span class="kw">$1</span>');
+  s=s.replace(/\b(int|double|boolean|char|String|Scanner)\b/g,'<span class="ty">$1</span>');
+  s=s.replace(/\b(\d+\.?\d*)\b/g,'<span class="nm">$1</span>');
+  return s.replace(/\u0000(\d+)\u0000/g,(_,i)=>store[+i]);}
+function renderPreview(){
+  const L=curLesson();
+  let h=`<div class="pv"><h1>${escHtml(L.code)} · ${escHtml(L.title)}</h1>${L.goal?`<div class="goal"><strong>Goal:</strong> ${L.goal}</div>`:''}`;
+  L.blocks.forEach(b=>{
+    if(b.type==='h') h+=`<h2>${escHtml(b.text||'')}</h2>`;
+    else if(b.type==='p') h+=`<p>${b.html||''}</p>`;
+    else if(b.type==='code') h+=`<div class="codeblock"><pre>${highlight(b.code||'')}</pre>${b.out?`<div class="out">${esc(b.out)}</div>`:''}</div>`;
+    else if(b.type==='callout'){const icon={mistake:'⚠',tip:'✓',note:'◆'}[b.kind||'note'];h+=`<div class="callout ${b.kind||'note'}"><div class="ch">${icon} ${escHtml(b.title||'')}</div><p style="margin:0">${b.html||''}</p></div>`;}
+    else if(b.type==='try') h+=`<div class="tryit"><div class="ch">▶ Try it yourself</div><p style="margin:0">${b.html||''}</p>${b.meta?`<div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);margin-top:6px">${escHtml(b.meta)} · runs in the coding exercise + scratchpad</div>`:''}</div>`;
+  });
+  h+='</div>';
+  document.getElementById('main').innerHTML=h;
+}
+function setMode(m){ mode=m; render(); }
+
+/* ---------- export / import / reset (your data, your control) ---------- */
+function exportJSON(){ showModal('Your curriculum (JSON — copy it anywhere)', JSON.stringify(data,null,2), null); }
+function importJSON(){ showModal('Paste curriculum JSON to load it', '', ()=>{ try{ data=JSON.parse(document.getElementById('modalText').value); sel={c:0,l:0}; touch(); render(); }catch(e){ alert('Invalid JSON'); } }); }
+function resetAll(){ if(confirm('Reset to the demo curriculum? Your edits will be lost.')){ data=seed(); sel={c:0,l:0}; touch(); render(); } }
+function showModal(title,text,onOk){ document.getElementById('modalTitle').textContent=title; document.getElementById('modalText').value=text; document.getElementById('modalbg').style.display='flex'; document.getElementById('modalOk').onclick=()=>{ if(onOk)onOk(); closeModal(); }; }
+function closeModal(){ document.getElementById('modalbg').style.display='none'; }
+
+load();
+</script>
+</body>
+</html>

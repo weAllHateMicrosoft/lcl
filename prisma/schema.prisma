@@ -1,0 +1,119 @@
+// classOS data model.
+//
+// Prototype phase uses SQLite (file-based, zero setup). To mature to Postgres:
+//   1. change `provider` below to "postgresql"
+//   2. set DATABASE_URL to your Neon/Supabase connection string
+//   3. run `npm run db:push`
+// Nothing else changes — `Json` maps to JSONB on Postgres automatically.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Curriculum tree (the editable CMS) ──────────────────────────────────────
+
+model Chapter {
+  id        String   @id @default(cuid())
+  order     Int
+  title     String
+  lessons   Lesson[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Lesson {
+  id        String  @id @default(cuid())
+  chapter   Chapter @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  chapterId String
+  code      String  @unique // e.g. "2.10" — stable, human-facing, used in URLs
+  order     Int
+  title     String
+  goal      String  @default("")
+
+  // Ordered array of typed blocks. See lib/curriculum/blocks.ts for the shape.
+  blocks    Json    @default("[]")
+  // Graded coding exercise: { prompt, starter, expected, behaviour, stdin }
+  exercise  Json    @default("{}")
+  // Pool the practice + summative quizzes draw from: [{ q, opts[], correct, why }]
+  quizBank  Json    @default("[]")
+
+  attempts  Attempt[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([chapterId, order])
+}
+
+// ─── People & roles ──────────────────────────────────────────────────────────
+
+// Role: "ADMIN" | "TEACHER" | "STUDENT". Kept as String because SQLite has no
+// native enums; becomes a real Prisma enum when you move to Postgres.
+model User {
+  id        String    @id @default(cuid())
+  name      String
+  email     String    @unique
+  role      String    @default("STUDENT")
+  attempts  Attempt[]
+  aiCalls   AiCall[]
+  createdAt DateTime  @default(now())
+}
+
+// ─── Tracking (the readiness/mastery engine, now durable) ────────────────────
+
+model Attempt {
+  id        String   @id @default(cuid())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  lesson    Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  lessonId  String
+  // "QUIZ_PRACTICE" | "QUIZ_GENERATED" | "CODE_RUN" | "QUIZ_SUMMATIVE".
+  // Only a passing QUIZ_SUMMATIVE can set MASTERED (see lib/progress.ts).
+  kind      String
+  passed    Boolean
+  score     Float    @default(0) // 0..1
+  detail    Json     @default("{}") // per-question results, code, verdict, etc.
+  createdAt DateTime @default(now())
+
+  @@index([userId, lessonId])
+}
+
+// Mastery is derived state, updated only through the one honest chokepoint
+// (see lib/progress.ts). Kept as a row so the teacher dashboard reads it cheaply.
+model Progress {
+  id        String  @id @default(cuid())
+  userId    String
+  lessonId  String
+  status    String  @default("NOT_STARTED") // NOT_STARTED | IN_PROGRESS | MASTERED
+  readiness Float   @default(0)             // 0..1 — evidence toward mastery
+  flag      String? // "stuck" | "coast" | null
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, lessonId])
+}
+
+model AiCall {
+  id        String   @id @default(cuid())
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  userId    String?
+  feature   String   // tutor | grade | generate | runjava
+  provider  String
+  model     String
+  inTokens  Int      @default(0)
+  outTokens Int      @default(0)
+  cost      Float    @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}
+
+// ─── Settings (DB-backed config — swap providers without redeploy) ───────────
+
+model Setting {
+  key   String @id
+  value Json
+}

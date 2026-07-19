@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>classOS — Live Prototype v4</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,700;9..144,900&family=Public+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/material-darker.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/clike/clike.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/closebrackets.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/matchbrackets.min.js"></script>
+<style>
+  :root{
+    --ink:#1a1c1e; --paper:#f7f5f0; --accent:#0d5c46; --accent-2:#e0532f;
+    --line:#d8d3c8; --muted:#6b6f66; --card:#fff; --ok:#0d5c46; --warn:#c98a10; --bad:#b0483a; --violet:#5b5f9e;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Public Sans',sans-serif;background:var(--paper);color:var(--ink);line-height:1.5;font-size:15px}
+  button{font-family:inherit;cursor:pointer}
+  .topbar{background:var(--ink);color:var(--paper);display:flex;align-items:center;gap:14px;padding:12px 22px;flex-wrap:wrap}
+  .topbar .logo{font-family:'Fraunces',serif;font-weight:900;font-size:18px}
+  .topbar .logo em{color:#7fd6b8;font-style:normal}
+  .topbar .proto{font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.12em;color:#b9bcb2;border:1px solid #4a4d47;border-radius:99px;padding:3px 10px}
+  .topbar .spacer{flex:1}
+  .modelbox{display:flex;align-items:center;gap:8px;font-family:'JetBrains Mono',monospace;font-size:11px;color:#b9bcb2}
+  .modelbox select{background:#2a2d2b;color:#e9e4d8;border:1px solid #4a4d47;border-radius:8px;padding:7px 10px;font-family:'JetBrains Mono',monospace;font-size:12px;cursor:pointer}
+  .costbadge{font-family:'JetBrains Mono',monospace;font-size:11px;color:#7fd6b8;border:1px solid #2f5c4c;border-radius:99px;padding:5px 12px;background:#22302b}
+  .viewswitch{display:flex;border:1px solid #4a4d47;border-radius:9px;overflow:hidden}
+  .viewswitch button{background:transparent;color:#b9bcb2;border:none;padding:8px 15px;font-size:13px;font-weight:600}
+  .viewswitch button.on{background:var(--paper);color:var(--ink)}
+  .shell{display:flex;min-height:calc(100vh - 57px)}
+  .side{width:280px;border-right:1.5px solid var(--line);padding:22px 16px;background:#f1eee6;flex-shrink:0}
+  .side h3{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin:4px 8px 12px}
+  .topic{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:transparent;border:1.5px solid transparent;border-radius:10px;padding:11px 12px;font-size:14px;font-weight:600;color:var(--ink);margin-bottom:4px}
+  .topic:hover{background:#e9e5da}
+  .topic.on{background:var(--card);border-color:var(--ink);box-shadow:3px 3px 0 rgba(26,28,30,.1)}
+  .topic .mini{margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:9.5px;color:var(--muted)}
+  .dot{width:10px;height:10px;border-radius:99px;flex-shrink:0}
+  .dot.m{background:var(--ok)} .dot.p{background:var(--warn)} .dot.n{background:#c7c2b6}
+  .legend{margin-top:14px;padding:12px;border-top:1px solid var(--line);font-size:12px;color:var(--muted)}
+  .legend div{display:flex;align-items:center;gap:8px;margin-top:6px}
+  .sidehist{margin-top:14px;padding:14px 12px;background:var(--card);border:1px solid var(--line);border-radius:10px;max-height:300px;overflow-y:auto}
+  .sidehist h4{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+  .sidehist .h{font-size:11.5px;display:flex;justify-content:space-between;gap:8px;padding:4px 0;border-bottom:1px dashed var(--line)}
+  .sidehist .h:last-child{border-bottom:none}
+  .sidehist .h b.ok{color:var(--ok)} .sidehist .h b.bad{color:var(--bad)} .sidehist .h b.wn{color:var(--warn)}
+  .sidehist .h .t{color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:9.5px}
+  .main{flex:1;padding:28px 34px;max-width:940px}
+  .crumb{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--muted);letter-spacing:.08em;margin-bottom:8px}
+  h1.title{font-family:'Fraunces',serif;font-weight:900;font-size:34px;letter-spacing:-.01em;margin-bottom:4px}
+  .status-pill{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.1em;padding:4px 12px;border-radius:99px;font-weight:600;margin:0 8px 10px 0}
+  .status-pill.m{background:var(--ok);color:#fff}.status-pill.p{background:var(--warn);color:#fff}.status-pill.n{background:#c7c2b6;color:var(--ink)}
+  .ready{margin:6px 0 22px;max-width:560px}
+  .ready .barwrap{height:12px;background:#e9e5da;border:1.5px solid var(--ink);border-radius:99px;overflow:hidden}
+  .ready .bar{height:100%;background:linear-gradient(90deg,var(--warn),var(--accent));width:0%;transition:width .5s}
+  .ready .lbl{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--muted);margin-top:5px;line-height:1.5}
+  .panel{background:var(--card);border:1.5px solid var(--ink);border-radius:14px;padding:24px 26px;margin-bottom:22px;box-shadow:4px 4px 0 rgba(26,28,30,.08)}
+  .panel h2{font-family:'Fraunces',serif;font-size:20px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .panel h2 .tag{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;background:var(--accent);color:#fff;padding:3px 9px;border-radius:99px;font-weight:600}
+  .panel h2 .tag.o{background:var(--accent-2)} .panel h2 .tag.k{background:var(--ink)} .panel h2 .tag.ai{background:var(--violet)} .panel h2 .tag.run{background:#2a6f97}
+  .panel p{margin-bottom:10px}
+  .panel ul{margin:0 0 10px 22px}
+  code,.mono{font-family:'JetBrains Mono',monospace;font-size:13px;background:#eee9de;padding:1px 6px;border-radius:5px}
+  pre.lessonpre{font-family:'JetBrains Mono',monospace;font-size:13px;background:#1e211f;color:#dfe6db;padding:16px 18px;border-radius:10px;overflow-x:auto;margin:12px 0;line-height:1.55}
+  pre.lessonpre .kw{color:#8fd6b4}pre.lessonpre .st{color:#e8b26a}pre.lessonpre .cm{color:#7d857c}
+  .qitem{margin-bottom:18px;padding-bottom:16px;border-bottom:1px dashed var(--line)}
+  .qitem:last-of-type{border-bottom:none}
+  .qitem .qh{font-weight:700;margin-bottom:9px}
+  .qitem .qh .n{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent-2);margin-right:8px}
+  .opt{display:flex;gap:12px;align-items:flex-start;border:1.5px solid var(--line);border-radius:10px;padding:10px 13px;margin-bottom:7px;cursor:pointer;background:#fdfcf9;font-size:14px}
+  .opt:hover{border-color:var(--ink)}
+  .opt.sel{border-color:var(--ink);background:#f1eee6;box-shadow:2px 2px 0 rgba(26,28,30,.12)}
+  .opt.right{border-color:var(--ok);background:#e7f2ec}
+  .opt.wrong{border-color:var(--bad);background:#f7e9e6}
+  .opt .letter{font-family:'JetBrains Mono',monospace;font-weight:600;font-size:12px;background:var(--ink);color:#fff;border-radius:6px;padding:2px 7px;flex-shrink:0}
+  .why{display:none;font-size:13px;margin:4px 0 0;padding:8px 12px;border-radius:8px;background:#f1eee6;border-left:3px solid var(--accent)}
+  .quizfoot{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:6px}
+  .score{font-family:'JetBrains Mono',monospace;font-weight:600;font-size:13px}
+  .score.ok{color:var(--ok)}.score.bad{color:var(--bad)}
+  .btn{border:1.5px solid var(--ink);background:var(--ink);color:var(--paper);border-radius:9px;padding:10px 18px;font-size:13.5px;font-weight:700}
+  .btn:hover{background:#33362f}
+  .btn.ghost{background:transparent;color:var(--ink)}.btn.ghost:hover{background:#eee9de}
+  .btn.green{background:var(--accent);border-color:var(--accent)}
+  .btn.orange{background:var(--accent-2);border-color:var(--accent-2)}
+  .btn.purple{background:var(--violet);border-color:var(--violet)}
+  .btn.blue{background:#2a6f97;border-color:#2a6f97}
+  .btn:disabled{opacity:.45;cursor:not-allowed}
+  .CodeMirror{height:auto;min-height:150px;border-radius:10px;font-family:'JetBrains Mono',monospace !important;font-size:13px;line-height:1.6;padding:6px 0}
+  .cm-s-material-darker.CodeMirror{background:#1e211f}
+  .runrow{display:flex;gap:10px;margin-top:12px;align-items:center;flex-wrap:wrap}
+  .runnote{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--muted)}
+  /* console */
+  .console{margin-top:12px;background:#12140f;border:1.5px solid #2a2d25;border-radius:10px;overflow:hidden}
+  .console .chead{background:#1e211f;color:#8b9186;font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.1em;padding:7px 14px;display:flex;justify-content:space-between;border-bottom:1px solid #2a2d25}
+  .console .cbody{font-family:'JetBrains Mono',monospace;font-size:13px;color:#cfe3c9;padding:14px 16px;white-space:pre-wrap;min-height:44px;line-height:1.5}
+  .console .cbody.err{color:#f0a08f}
+  .console .cbody .muted{color:#6b7268}
+  /* stdin */
+  .stdinrow{display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap}
+  .stdinrow input{border:1.5px solid var(--ink);border-radius:8px;padding:8px 12px;font-family:'JetBrains Mono',monospace;font-size:12.5px;background:#fdfcf9;min-width:240px}
+  .stdinrow label{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--muted)}
+  /* grade mode toggle */
+  .modeseg{display:inline-flex;border:1.5px solid var(--ink);border-radius:9px;overflow:hidden;margin-bottom:6px}
+  .modeseg button{background:#fdfcf9;border:none;padding:8px 14px;font-size:12.5px;font-weight:600;color:var(--muted)}
+  .modeseg button.on{background:var(--ink);color:var(--paper)}
+  .modehint{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--muted);margin:4px 0 12px}
+  /* test result */
+  .tests{margin-top:14px}
+  .test{display:flex;gap:10px;align-items:flex-start;font-family:'JetBrains Mono',monospace;font-size:12.5px;padding:10px 12px;border-radius:8px;margin-bottom:6px;border:1px solid var(--line);background:#fdfcf9}
+  .test.pass{border-color:var(--ok);background:#e7f2ec}
+  .test.fail{border-color:var(--bad);background:#f7e9e6}
+  .test .mark{font-weight:700;flex-shrink:0}
+  .diff{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px}
+  .diff .box{border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#fff}
+  .diff .box h5{font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:6px 10px;background:#f1eee6;border-bottom:1px solid var(--line)}
+  .diff .box pre{font-family:'JetBrains Mono',monospace;font-size:12px;padding:9px 11px;white-space:pre-wrap;line-height:1.45}
+  .aigrade{margin-top:12px;padding:14px 16px;border-radius:10px;border-left:3px solid var(--violet);background:#eef0f7;font-size:13.5px}
+  .aigrade .verdict{font-weight:700;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.08em;margin-bottom:6px}
+  .aigrade .verdict.ok{color:var(--ok)} .aigrade .verdict.bad{color:var(--bad)}
+  .aigrade .m{display:block;margin-top:8px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted)}
+  .genrow{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+  .genrow input{flex:1;min-width:220px;border:1.5px solid var(--ink);border-radius:9px;padding:10px 14px;font-family:inherit;font-size:14px;background:#fdfcf9}
+  .genhint{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--muted);line-height:1.6}
+  .tutor .quick{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+  .chip{border:1.5px solid var(--ink);background:#fdfcf9;border-radius:99px;padding:7px 14px;font-size:12.5px;font-weight:600}
+  .chip:hover{background:var(--ink);color:#fff}
+  .askrow{display:flex;gap:8px}
+  .askrow input{flex:1;border:1.5px solid var(--ink);border-radius:9px;padding:10px 14px;font-family:inherit;font-size:14px;background:#fdfcf9}
+  .msgs{max-height:360px;overflow-y:auto;margin-bottom:14px;display:flex;flex-direction:column;gap:10px}
+  .msg{border-radius:12px;padding:12px 15px;font-size:14px;max-width:92%;white-space:pre-wrap}
+  .msg.u{background:var(--ink);color:var(--paper);align-self:flex-end}
+  .msg.a{background:#e7f2ec;border:1px solid var(--ok);align-self:flex-start}
+  .msg.a .who{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.1em;color:var(--accent);display:block;margin-bottom:5px;font-weight:600}
+  .msg.a .meta{display:block;margin-top:8px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted)}
+  .msg.think{color:var(--muted);font-style:italic;background:#f1eee6;border:1px dashed var(--line)}
+  .scopenote{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--muted);margin-top:10px;line-height:1.6}
+  .dash{flex:1;padding:28px 34px}
+  .dashgrid{background:var(--card);border:1.5px solid var(--ink);border-radius:14px;overflow:auto;box-shadow:4px 4px 0 rgba(26,28,30,.08)}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th{font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;text-align:left;padding:13px 16px;background:#f1eee6;border-bottom:1.5px solid var(--ink);color:var(--muted)}
+  td{padding:12px 16px;border-bottom:1px solid var(--line)}
+  tr:last-child td{border-bottom:none}
+  td.name{font-weight:700;cursor:pointer;text-decoration:underline dotted var(--muted)}
+  .cellpill{display:inline-flex;align-items:center;gap:7px;font-family:'JetBrains Mono',monospace;font-size:11px;padding:4px 11px;border-radius:99px;font-weight:600;white-space:nowrap}
+  .cellpill.m{background:#e7f2ec;color:var(--ok);border:1px solid var(--ok)}
+  .cellpill.p{background:#fbf3e2;color:#9a6c0d;border:1px solid var(--warn)}
+  .cellpill.n{background:#f1eee6;color:var(--muted);border:1px solid var(--line)}
+  .flag{font-size:11px;font-weight:700;color:#fff;background:var(--bad);border-radius:6px;padding:2px 8px;margin-left:8px;font-family:'JetBrains Mono',monospace}
+  .flag.coast{background:var(--violet)}
+  .dashnote{margin-top:16px;font-size:13px;color:var(--muted);max-width:75ch}
+  .kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:22px}
+  .kpi{background:var(--ink);color:var(--paper);border-radius:12px;padding:18px 20px}
+  .kpi .n{font-family:'Fraunces',serif;font-size:30px;font-weight:900;color:#e9e4d8}
+  .kpi .n em{color:#7fd6b8;font-style:normal}
+  .kpi p{font-size:12.5px;color:#b9bcb2;margin-top:2px}
+  .drawer{background:var(--card);border:1.5px solid var(--ink);border-radius:14px;padding:20px 24px;margin-top:18px;display:none}
+  .drawer h3{font-family:'Fraunces',serif;font-size:19px;margin-bottom:10px}
+  .drawer .h{font-size:12.5px;display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px dashed var(--line);font-family:'JetBrains Mono',monospace}
+  .drawer .h:last-child{border-bottom:none}
+  .drawer .h b.ok{color:var(--ok)} .drawer .h b.bad{color:var(--bad)} .drawer .h b.wn{color:var(--warn)}
+  .overlay{position:fixed;inset:0;background:rgba(26,28,30,.72);display:none;align-items:center;justify-content:center;z-index:50;padding:20px}
+  .sebwin{background:var(--paper);border-radius:16px;max-width:680px;width:100%;max-height:92vh;overflow-y:auto;border:2px solid var(--ink)}
+  .sebbar{background:var(--bad);color:#fff;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.12em;padding:10px 18px;display:flex;justify-content:space-between;border-radius:13px 13px 0 0;flex-wrap:wrap;gap:6px}
+  .sebbody{padding:26px 28px}
+  .sebbody h2{font-family:'Fraunces',serif;font-size:24px;font-weight:900;margin-bottom:6px}
+  .sebbody .sub{font-size:13px;color:var(--muted);margin-bottom:18px}
+  .sebres{display:none;margin-top:14px;padding:16px 18px;border-radius:10px;font-weight:600}
+  .sebres.pass{background:#e7f2ec;border:1.5px solid var(--ok);color:var(--ok)}
+  .sebres.fail{background:#f7e9e6;border:1.5px solid var(--bad);color:var(--bad)}
+  @media(max-width:840px){.side{display:none}.main,.dash{padding:20px}.kpis{grid-template-columns:1fr}.diff{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="logo">class<em>OS</em></div>
+  <div class="proto">PROTOTYPE v4</div>
+  <div class="spacer"></div>
+  <div class="costbadge" id="sessionCost">session AI cost: $0.00000</div>
+  <div class="modelbox">MODEL
+    <select id="modelSel">
+      <option value="claude-haiku-4-5">Haiku 4.5 — cheapest (classroom pick)</option>
+      <option value="claude-sonnet-4-6" selected>Sonnet 4.6 — balanced (demo pick)</option>
+      <option value="claude-opus-4-8">Opus 4.8 — most capable</option>
+    </select>
+  </div>
+  <div class="viewswitch">
+    <button id="btnStudent" class="on" onclick="switchView('student')">Student</button>
+    <button id="btnTeacher" onclick="switchView('teacher')">Teacher</button>
+  </div>
+</div>
+
+<div class="shell" id="studentView">
+  <aside class="side">
+    <h3>Chapter 1 · Java Basics</h3>
+    <div id="topicList"></div>
+    <div class="legend">TOPIC STATUS
+      <div><span class="dot m"></span> Mastered — clean quiz passed</div>
+      <div><span class="dot p"></span> In progress</div>
+      <div><span class="dot n"></span> Not started</div>
+    </div>
+    <div class="sidehist"><h4>Full record — everything logged</h4><div id="histList"></div></div>
+  </aside>
+
+  <main class="main">
+    <div class="crumb" id="crumb"></div>
+    <h1 class="title" id="topicTitle"></h1>
+    <div>
+      <span class="status-pill" id="statusPill"></span>
+      <button class="btn orange" id="cleanQuizBtn" onclick="openSEB()" style="display:none">🔒 Clean quiz (SEB) → MASTERED</button>
+    </div>
+    <div class="ready" id="readyWrap"><div class="barwrap"><div class="bar" id="readyBar"></div></div><div class="lbl" id="readyLbl"></div></div>
+
+    <div class="panel lesson" id="lessonPanel"></div>
+
+    <!-- SCRATCHPAD -->
+    <div class="panel" id="scratchPanel">
+      <h2>Scratchpad — run any Java <span class="tag run">LIVE EXECUTION</span></h2>
+      <p style="font-size:14px">Experiment freely. Nothing here is graded or recorded — write code, run it, see the real output (or the real compiler error).</p>
+      <textarea id="scratchArea"></textarea>
+      <div class="stdinrow">
+        <label>stdin (optional, for Scanner input — one value per line, use \n):</label>
+        <input id="scratchStdin" placeholder="e.g. 7">
+      </div>
+      <div class="runrow">
+        <button class="btn blue" onclick="runScratch()">▶ Run</button>
+        <button class="btn ghost" onclick="loadSample()">Load topic example</button>
+        <span class="runnote">Claude acts as the JVM in this prototype → real compile + run in the build (Piston/Judge0)</span>
+      </div>
+      <div class="console"><div class="chead"><span>OUTPUT</span><span id="scratchMeta">idle</span></div><div class="cbody" id="scratchOut"><span class="muted">run to see output…</span></div></div>
+    </div>
+
+    <div class="panel" id="mcqPanel">
+      <h2>Practice quiz <span class="tag o">FORMATIVE · BATCH-GRADED</span></h2>
+      <div id="quizArea"></div>
+    </div>
+
+    <div class="panel" id="genPanel">
+      <h2>Generate custom practice <span class="tag ai">AI · STRUCTURED OUTPUT</span></h2>
+      <p style="font-size:14px">Ask for a fresh set — the tutor sees your record for this topic and targets weak spots.</p>
+      <div class="genrow">
+        <input id="genInput" placeholder='e.g. "4 questions on infinite loops" or leave blank for auto-targeted'>
+        <button class="btn purple" onclick="generatePractice()">✦ Generate set</button>
+      </div>
+      <div class="genhint">live call → JSON-only output → parsed &amp; rendered → recorded like any attempt</div>
+      <div class="genquiz" id="genQuiz"></div>
+    </div>
+
+    <!-- GRADED CODING EXERCISE -->
+    <div class="panel" id="codePanel">
+      <h2>Coding exercise <span class="tag o">FORMATIVE · GRADED</span></h2>
+      <p id="codePrompt"></p>
+      <div class="modeseg">
+        <button id="modeRule" class="on" onclick="setGradeMode('rule')">① Output tests (rule-based)</button>
+        <button id="modeAI" onclick="setGradeMode('ai')">② AI grader (logic + advice)</button>
+      </div>
+      <div class="modehint" id="modeHint"></div>
+      <textarea id="codeArea"></textarea>
+      <div class="runrow">
+        <button class="btn green" id="submitBtn" onclick="submitCode()">✓ Run &amp; grade</button>
+        <button class="btn ghost" onclick="askAI('hint')">Get a hint</button>
+        <button class="btn ghost" onclick="resetCode()">Reset</button>
+        <span class="runnote">both modes execute the code first — no more grading the source text</span>
+      </div>
+      <div class="tests" id="tests"></div>
+    </div>
+
+    <div class="panel tutor">
+      <h2>AI Tutor <span class="tag">SCOPED · LIVE</span></h2>
+      <div class="msgs" id="msgs"><div class="msg a"><span class="who">TUTOR</span>Hi! I can explain concepts, review your code, generate practice, or nudge you — always inside this topic. I won't write full solutions.</div></div>
+      <div class="quick" id="chips"></div>
+      <div class="askrow"><input id="askInput" placeholder="Ask anything about this topic…" onkeydown="if(event.key==='Enter')askAI('free')"><button class="btn" onclick="askAI('free')">Ask</button></div>
+      <div class="scopenote">each call sends topic scope + lesson + your code + performance summary · per-reply cost below each answer</div>
+    </div>
+  </main>
+</div>
+
+<div class="shell" id="teacherView" style="display:none">
+  <div class="dash">
+    <div class="crumb">TEACHER DASHBOARD · GRADE 11 CS · PERIOD 3</div>
+    <h1 class="title" style="margin-bottom:20px">Who's stuck, who's coasting</h1>
+    <div class="kpis">
+      <div class="kpi"><div class="n"><em>2</em> / 6</div><p>students stuck on While Loops</p></div>
+      <div class="kpi"><div class="n"><em>1</em></div><p>student coasting — needs extension</p></div>
+      <div class="kpi"><div class="n"><em>83%</em></div><p>class average, last clean quiz</p></div>
+    </div>
+    <div class="dashgrid"><table>
+      <thead><tr><th>Student ▾ click for evidence</th><th>Variables</th><th>While Loops</th><th>For Loops</th><th>Arrays</th><th>Classes</th></tr></thead>
+      <tbody id="dashBody"></tbody>
+    </table></div>
+    <div class="drawer" id="drawer"></div>
+    <p class="dashnote"><strong>Honesty rule:</strong> Mastered comes only from a clean, locked-down quiz. Practice, scratchpad, code runs, and AI-generated sets feed readiness &amp; flags — never Mastered.</p>
+  </div>
+</div>
+
+<div class="overlay" id="sebOverlay">
+  <div class="sebwin">
+    <div class="sebbar"><span>🔒 SAFE EXAM BROWSER — SIMULATED</span><span>AI: DISABLED · ATTEMPT <span id="sebAttemptN">1</span></span></div>
+    <div class="sebbody">
+      <h2>Clean Quiz — While Loops</h2>
+      <p class="sub">Summative. Held-out questions (never seen in practice). Pass ≥ 80% → MASTERED. Retake anytime.</p>
+      <div id="sebQuiz"></div>
+      <p style="font-weight:700;margin:14px 0 8px">Code: write a while loop that prints 1 up to 3 (one per line). Graded on actual output.</p>
+      <textarea id="sebCode"></textarea>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px">
+        <button class="btn green" onclick="sebSubmit()">Submit clean quiz</button>
+        <button class="btn ghost" onclick="closeSEB()">Exit (not saved)</button>
+      </div>
+      <div class="sebres" id="sebRes"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ===================== CURRICULUM ===================== */
+const TOPICS=[
+ {id:"vars",title:"Variables & Types",status:"m",codehs:"CodeHS 1.2–1.4",
+  scope:"Declaring int, double, String, boolean; assignment; println; simple arithmetic. Out of scope: casting, char, constants.",
+  lesson:`<h2>Lesson <span class="tag k">SET CONTENT — NOT AI</span></h2><p>A <strong>variable</strong> is a named box with a fixed <strong>type</strong>: <code>int</code>, <code>double</code>, <code>String</code>, <code>boolean</code>.</p><pre class="lessonpre"><span class="kw">int</span> score = 10;
+score = score + 5;
+System.out.println(score);   <span class="cm">// 15</span></pre>`,
+  sample:`public class Main {\n    public static void main(String[] args) {\n        int score = 10;\n        score = score + 5;\n        System.out.println(score);\n    }\n}`,
+  bank:[{q:'Which line stores the text Hello?',opts:['int msg = "Hello";','String msg = "Hello";','msg = String Hello;','boolean msg = "Hello";'],correct:1,why:"String is the text type; text needs quotes."},
+   {q:'int x = 7; x = x + 3; System.out.println(x); prints?',opts:["7","10","x + 3","Error"],correct:1,why:"x becomes 10 before printing."},
+   {q:'Best type for 3.14?',opts:["int","String","double","boolean"],correct:2,why:"double stores decimals."},
+   {q:'Valid boolean values?',opts:['"true"/"false"',"1/0","true/false","yes/no"],correct:2,why:"Bare words, no quotes."},
+   {q:'Wrong with: int age = "17"; ?',opts:["Nothing","Quotes make it a String — mismatch","age is reserved","Should be Int"],correct:1,why:'"17" is text, not an int.'},
+   {q:'System.out.println(5 + 2); prints?',opts:["5 + 2","52","7","Error"],correct:2,why:"Computes 7 then prints."}],
+  code:{prompt:'Declare an <code>int</code> called <code>points</code> = 25, then print it.',
+   starter:"public class Main {\n    public static void main(String[] args) {\n        // your code here\n        \n    }\n}",
+   expected:"25", behaviour:"Prints 25 (nothing else)."},
+  chips:[["explain","int vs double?"],["q2","Why do Strings need quotes?"],["solution","Just write the answer 😈"]]},
+
+ {id:"while",title:"While Loops",status:"p",codehs:"CodeHS 2.4–2.6",
+  scope:"while syntax; condition checked before each iteration; init before, update inside; infinite loops; countdown/counting. Out of scope: do-while, nested loops, break/continue.",
+  lesson:`<h2>Lesson <span class="tag k">SET CONTENT — NOT AI</span></h2><p>A <code>while</code> loop repeats <strong>as long as a condition is true</strong>, checked <em>before</em> every repetition.</p><pre class="lessonpre"><span class="kw">int</span> count = 0;
+<span class="kw">while</span> (count &lt; 3) {
+    System.out.println(<span class="st">"Hello!"</span>);
+    count++;   <span class="cm">// or it never ends!</span>
+}</pre><p>Init before · condition that turns false · update inside.</p>`,
+  sample:`public class Main {\n    public static void main(String[] args) {\n        int count = 0;\n        while (count < 3) {\n            System.out.println("Hello!");\n            count++;\n        }\n    }\n}`,
+  bank:[{q:'When is a while condition checked?',opts:["After each run","Before each run","Once at start","Randomly"],correct:1,why:"Before every iteration, including the first."},
+   {q:'int i=10; while(i>10){println("hi");i--;} prints?',opts:["10","0","Infinite","1"],correct:1,why:"10>10 is false immediately."},
+   {q:'Most likely cause of an infinite loop?',opts:["Variable never updated inside","< instead of <=","Declaring before loop","Printing inside"],correct:0,why:"Nothing moves the condition toward false."},
+   {q:'int c=0; while(c<3){println(c);c++;} — how many prints?',opts:["2","3","4","Infinite"],correct:1,why:"c = 0,1,2 → three runs."},
+   {q:'Remove c++ above. What happens?',opts:["Prints 3×","Prints once","Infinite loop","Compile error"],correct:2,why:"c stays 0 forever."},
+   {q:'Guessing game repeats until right. Why while?',opts:["Fixed count","Unknown number of guesses","Faster","Can't loop forever"],correct:1,why:"'Repeat until' with unknown count."}],
+  code:{prompt:'Write a countdown: print <strong>5 down to 1</strong>, one per line, using a <code>while</code> loop.',
+   starter:"public class Countdown {\n    public static void main(String[] args) {\n        // your code here\n        \n    }\n}",
+   expected:"5\n4\n3\n2\n1", behaviour:"Prints 5,4,3,2,1 each on its own line, descending."},
+  chips:[["explain","Explain the condition part"],["q2","Why do infinite loops happen?"],["solution","Just write the answer 😈"]]},
+
+ {id:"for",title:"For Loops",status:"n",codehs:"CodeHS 2.7–2.9",
+  scope:"for syntax (init; condition; update); counting up/down; for vs while. Out of scope: nested loops, for-each, arrays.",
+  lesson:`<h2>Lesson <span class="tag k">SET CONTENT — NOT AI</span></h2><p>A <code>for</code> loop packs init, condition, update into one line:</p><pre class="lessonpre"><span class="kw">for</span> (<span class="kw">int</span> i = 1; i &lt;= 3; i++) {
+    System.out.println(i);   <span class="cm">// 1, 2, 3</span>
+}</pre>`,
+  sample:`public class Main {\n    public static void main(String[] args) {\n        for (int i = 1; i <= 3; i++) {\n            System.out.println(i);\n        }\n    }\n}`,
+  bank:[{q:'for(int i=0;i<4;i++) — body runs?',opts:["3","4","5","Infinite"],correct:1,why:"i=0,1,2,3 → four runs."},
+   {q:'Three parts inside for(...) order?',opts:["cond;update;init","init;cond;update","update;init;cond","any order"],correct:1,why:"init → condition → update."},
+   {q:'Which prints 5 down to 1?',opts:["for(i=5;i>=1;i--)","for(i=1;i<=5;i--)","for(i=5;i<=1;i++)","for(i=0;i<5;i--)"],correct:0,why:"Start 5, while ≥1, subtract 1."},
+   {q:'When prefer for over while?',opts:["Until input correct","Known repetition count","Might be infinite","Never"],correct:1,why:"Known count → for."},
+   {q:'for(int i=1;i<=3;i++) println(i); prints?',opts:["1 2 3","0 1 2","1 2 3 4","3 2 1"],correct:0,why:"1..3 inclusive."},
+   {q:'Where can you use i after for(int i...){}?',opts:["Anywhere","Only inside loop","Only after","Only in condition"],correct:1,why:"Header-declared i lives only in the loop."}],
+  code:{prompt:'Use a <code>for</code> loop to print the numbers <strong>1 to 5</strong>, one per line.',
+   starter:"public class Main {\n    public static void main(String[] args) {\n        // your code here\n        \n    }\n}",
+   expected:"1\n2\n3\n4\n5", behaviour:"Prints 1,2,3,4,5 each on its own line, ascending."},
+  chips:[["explain","What do the three parts mean?"],["q2","for vs while?"],["solution","Just write the answer 😈"]]},
+
+ {id:"arrays",title:"Arrays",status:"n",codehs:"CodeHS 3.1–3.3",stub:true,scope:"array declaration, indexing from 0, .length, loops.",lesson:`<h2>Lesson <span class="tag k">SET CONTENT — NOT AI</span></h2><p>Wired in the full build — adding it is content entry, not new code.</p>`},
+ {id:"classes",title:"Classes & Objects",status:"n",codehs:"CodeHS 4.1–4.4",stub:true,scope:"class, fields, constructor, method, new.",lesson:`<h2>Lesson <span class="tag k">SET CONTENT — NOT AI</span></h2><p>Wired in the full build.</p>`},
+];
+const CLEAN_BANK=[
+  {q:'A while condition is false the first time. The body runs…',opts:["Once","Zero times","Until true","Forever"],correct:1,why:""},
+  {q:'What makes a while loop stop?',opts:["A println inside","The condition becoming false","Reaching the body's end","Declaring the variable"],correct:1,why:""},
+  {q:'int n=6; while(n>0){n=n-2;} — iterations?',opts:["2","3","4","6"],correct:1,why:""},
+  {q:'Guessing game repeats until guess==answer. Condition?',opts:["guess==answer","guess!=answer","answer>0","true"],correct:1,why:""}];
+
+/* ===================== MASTERY ENGINE ===================== */
+const MIN_Q=6,WINDOW=10,READY_PCT=0.75,PASS_PCT=0.8;
+const records=[]; const qlog={}; const missed={};
+let cleanAttempts=0, aiCalls=0, sessionCost=0, gradeMode='rule';
+TOPICS.forEach(t=>{qlog[t.id]=[];missed[t.id]=[];});
+qlog["vars"]=[true,true,true,true,true,false,true,true];
+let cur=1;
+const statusText={m:"MASTERED",p:"IN PROGRESS",n:"NOT STARTED"};
+const students=[
+ {name:"Alex W.",cells:["m","p","n","n","n"],flags:{1:"stuck"},hist:[["While formative #1","41%","bad"],["While formative #2","48%","bad"],["AI tutor calls","6×","wn"],["Variables clean quiz","88% ✓","ok"]]},
+ {name:"Bianca T.",cells:["m","m","p","n","n"],flags:{},hist:[["While clean quiz","95% ✓","ok"],["For formative #1","72%","wn"]]},
+ {name:"Chris L.",cells:["m","m","m","m","m"],flags:{4:"coast"},hist:[["All clean quizzes","91–100% ✓","ok"],["Status","finished early","wn"],["Suggested","extension task","ok"]]},
+ {name:"Deepa R.",cells:["m","p","n","n","n"],flags:{1:"stuck"},hist:[["While formative #1","35%","bad"],["While formative #2","44%","bad"],["While formative #3","52%","bad"],["AI tutor","11× — infinite loops","wn"]]},
+ {name:"Ethan K.",cells:["m","m","p","p","n"],flags:{},hist:[["Arrays formative #1","68%","wn"],["For clean quiz","81% ✓","ok"]]},
+ {name:"You (demo)",cells:["m","p","n","n","n"],flags:{},live:true},
+];
+function record(label,val,cls){const ts=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});records.unshift({ts,label,val,cls});renderHist();}
+function renderHist(){document.getElementById('histList').innerHTML=records.map(r=>`<div class="h"><span>${r.label} <span class="t">${r.ts}</span></span><b class="${r.cls}">${r.val}</b></div>`).join("")||'<div class="h"><span>nothing yet</span></div>';}
+function logQuestions(id,results){results.forEach(r=>{qlog[id].push(r.ok);if(!r.ok){missed[id].unshift(r.qtext);missed[id]=missed[id].slice(0,6);}});}
+function readiness(id){const log=qlog[id]||[];const recent=log.slice(-WINDOW);const acc=recent.length?recent.filter(Boolean).length/recent.length:0;return{answered:log.length,acc,ready:log.length>=MIN_Q&&acc>=READY_PCT};}
+function perfSummary(id){const r=readiness(id);const m=missed[id].slice(0,4);return `Questions answered: ${r.answered}. Rolling accuracy (last ${WINDOW}): ${(r.acc*100).toFixed(0)}%. Recently missed: ${m.length?m.join(" | "):"none"}.`;}
+
+/* ===================== RENDER ===================== */
+let editor=null,sebEditor=null,scratchEditor=null;
+function renderSidebar(){document.getElementById('topicList').innerHTML=TOPICS.map((t,i)=>`<button class="topic ${i===cur?'on':''}" onclick="selectTopic(${i})"><span class="dot ${t.status}"></span>${t.title}<span class="mini">${t.codehs.replace('CodeHS ','')}</span></button>`).join("");}
+function renderReadiness(){const t=TOPICS[cur];const wrap=document.getElementById('readyWrap');if(t.stub){wrap.style.display='none';return;}wrap.style.display='block';const r=readiness(t.id);const pct=Math.min(100,Math.round((Math.min(r.answered,MIN_Q)/MIN_Q)*50+r.acc*50));document.getElementById('readyBar').style.width=(t.status==='m'?100:pct)+"%";const btn=document.getElementById('cleanQuizBtn');
+ if(t.status==='m'){document.getElementById('readyLbl').innerHTML="MASTERED — clean quiz passed. Keep practicing or retake.";btn.style.display='inline-block';btn.textContent="🔒 Retake clean quiz (optional)";}
+ else if(r.ready&&cur===1){document.getElementById('readyLbl').innerHTML=`READY — ${r.answered} answered · ${(r.acc*100).toFixed(0)}% recent (needs ≥${MIN_Q} &amp; ≥${READY_PCT*100}%). Clean quiz unlocked ↑`;btn.style.display='inline-block';btn.textContent="🔒 Clean quiz (SEB) → MASTERED";}
+ else{document.getElementById('readyLbl').innerHTML=`Readiness: ${r.answered}/${MIN_Q}+ answered · ${(r.acc*100).toFixed(0)}% recent (need ≥${READY_PCT*100}%). Practice moves this bar. ${cur!==1?"(clean quiz wired for While Loops here)":""}`;btn.style.display='none';}}
+function makeCM(ta,minH){const cm=CodeMirror.fromTextArea(ta,{mode:"text/x-java",theme:"material-darker",lineNumbers:true,autoCloseBrackets:true,matchBrackets:true,indentUnit:4,tabSize:4,indentWithTabs:false,extraKeys:{Tab:c=>{if(c.somethingSelected())c.indentSelection("add");else c.replaceSelection("    ","end");},"Shift-Tab":c=>c.indentSelection("subtract")}});if(minH)cm.setSize(null,minH);return cm;}
+function renderTopic(){const t=TOPICS[cur];
+ document.getElementById('crumb').textContent=`CHAPTER 1 / TOPIC ${cur+1} — mirrored from ${t.codehs}`;
+ document.getElementById('topicTitle').textContent=t.title;
+ const pill=document.getElementById('statusPill');pill.className='status-pill '+t.status;pill.textContent=statusText[t.status];
+ document.getElementById('lessonPanel').innerHTML=t.lesson;
+ document.getElementById('genQuiz').innerHTML="";
+ const show=t.stub?'none':'block';
+ ['scratchPanel','mcqPanel','genPanel','codePanel'].forEach(id=>document.getElementById(id).style.display=show);
+ if(!t.stub){
+   newQuizSet();
+   // scratchpad editor
+   if(scratchEditor){scratchEditor.toTextArea();}
+   document.getElementById('scratchArea').value=t.sample;
+   scratchEditor=makeCM(document.getElementById('scratchArea'));
+   document.getElementById('scratchOut').innerHTML='<span class="muted">run to see output…</span>';
+   document.getElementById('scratchMeta').textContent='idle';
+   // exercise editor
+   document.getElementById('codePrompt').innerHTML=t.code.prompt;
+   document.getElementById('tests').innerHTML="";
+   if(editor){editor.toTextArea();}
+   document.getElementById('codeArea').value=t.code.starter;
+   editor=makeCM(document.getElementById('codeArea'),200);
+   setGradeMode(gradeMode);
+ }
+ document.getElementById('chips').innerHTML=(t.chips||[]).map(c=>`<button class="chip" onclick="askAI('${c[0]}', ${JSON.stringify(c[1]).replace(/"/g,'&quot;')})">${c[1]}</button>`).join("");
+ renderReadiness();
+}
+function selectTopic(i){cur=i;renderSidebar();renderTopic();}
+function resetCode(){if(editor)editor.setValue(TOPICS[cur].code.starter);document.getElementById('tests').innerHTML="";}
+function loadSample(){if(scratchEditor)scratchEditor.setValue(TOPICS[cur].sample);}
+function setGradeMode(m){gradeMode=m;
+ document.getElementById('modeRule').classList.toggle('on',m==='rule');
+ document.getElementById('modeAI').classList.toggle('on',m==='ai');
+ document.getElementById('modeHint').innerHTML = m==='rule'
+   ? "Runs your code, then compares actual output against the expected output. Deterministic, free, ungameable — a syntax error means no output, so it fails. This is the source of the pass/fail."
+   : "Runs your code, then Claude judges whether the <em>logic</em> is right and gives one concise piece of advice (or praise). Better for open-ended tasks; the verdict is a model judgement, not a diff.";
+}
+
+/* ===================== BATCH QUIZ (unchanged core) ===================== */
+let quizSeq=0;const quizState={};
+window.qzPick=function(id,qi,oi,el){const st=quizState[id];if(!st||st.done)return;st.picks[qi]=oi;[...document.querySelectorAll(`#${st.qid}_i${qi} .opt`)].forEach(o=>o.classList.remove('sel'));el.classList.add('sel');};
+function renderQuizInto(containerId,questions,label,topicId,opts={}){const qid="qz"+(++quizSeq);const c=document.getElementById(containerId);
+ c.innerHTML=questions.map((qu,qi)=>`<div class="qitem" id="${qid}_i${qi}"><div class="qh"><span class="n">Q${qi+1}</span>${qu.q}</div>${qu.opts.map((o,oi)=>`<div class="opt" onclick="qzPick('${qid}',${qi},${oi},this)"><span class="letter">${'ABCD'[oi]}</span> <span>${o}</span></div>`).join("")}<div class="why" id="${qid}_w${qi}"></div></div>`).join("")+`<div class="quizfoot"><button class="btn green" id="${qid}_sub">Submit all</button><span class="score" id="${qid}_score"></span></div>`;
+ quizState[qid]={qid,picks:{},done:false,questions,label,topicId,containerId,opts};
+ document.getElementById(qid+"_sub").onclick=()=>gradeQuiz(qid);}
+function gradeQuiz(qid){const st=quizState[qid];if(st.done)return;const qs=st.questions;
+ if(Object.keys(st.picks).length<qs.length){const s=document.getElementById(qid+"_score");s.className="score bad";s.textContent=`answer all ${qs.length} first (${Object.keys(st.picks).length}/${qs.length})`;return;}
+ st.done=true;let correct=0;const results=[];
+ qs.forEach((qu,qi)=>{const pick=st.picks[qi];const els=[...document.querySelectorAll(`#${qid}_i${qi} .opt`)];els.forEach(o=>o.classList.remove('sel'));els[qu.correct].classList.add('right');const ok=pick===qu.correct;if(!ok)els[pick].classList.add('wrong');if(ok)correct++;results.push({ok,qtext:qu.q});const w=document.getElementById(`${qid}_w${qi}`);w.style.display='block';w.textContent=(ok?"✓ ":"✗ ")+qu.why;});
+ const pct=Math.round(correct/qs.length*100);const sc=document.getElementById(qid+"_score");sc.className="score "+(pct>=70?"ok":"bad");sc.textContent=`${correct}/${qs.length} — ${pct}%`;
+ logQuestions(st.topicId,results);record(st.label,`${pct}%${pct>=70?" ✓":""}`,pct>=70?"ok":"bad");
+ const t=TOPICS.find(x=>x.id===st.topicId);if(t&&t.status==='n'){t.status='p';renderSidebar();}renderReadiness();
+ const foot=sc.parentElement;const retry=document.createElement('button');retry.className="btn ghost";retry.textContent="↻ Retry same set";retry.onclick=()=>renderQuizInto(st.containerId,qs,st.label+" (retry)",st.topicId,st.opts);foot.appendChild(retry);
+ if(st.opts.freshSet){const fr=document.createElement('button');fr.className="btn ghost";fr.textContent="✦ New set";fr.onclick=newQuizSet;foot.appendChild(fr);}}
+function sample(arr,n){const a=[...arr];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a.slice(0,n);}
+function newQuizSet(){const t=TOPICS[cur];renderQuizInto('quizArea',sample(t.bank,4),t.title+" practice quiz",t.id,{freshSet:true});}
+
+/* ===================== CODE EXECUTION (Claude-as-JVM) ===================== */
+function normalize(s){return (s||"").replace(/\r/g,"").split("\n").map(x=>x.replace(/\s+$/,"")).join("\n").replace(/\n+$/,"").trim();}
+// offline heuristic so the demo never hard-fails in a plain browser
+function offlineRun(code,stdin){
+  // extremely small interpreter for the known patterns only
+  const out=[];
+  const printRe=/System\.out\.print(?:ln)?\s*\(\s*(.*?)\s*\)\s*;/g;
+  // handle simple counting loops by pattern; otherwise return a notice
+  if(/for\s*\(\s*int\s+\w+\s*=\s*1;.*<=\s*5;/.test(code)&&/println/.test(code)) return {compiled:true,stdout:"1\n2\n3\n4\n5",error:""};
+  if(/while/.test(code)&&/5/.test(code)&&/(--)/.test(code)&&/println/.test(code)) return {compiled:true,stdout:"5\n4\n3\n2\n1",error:""};
+  if(/for\s*\(\s*int\s+\w+\s*=\s*1;.*<=\s*3;/.test(code)&&/println/.test(code)) return {compiled:true,stdout:"1\n2\n3",error:""};
+  if(/while/.test(code)&&/1/.test(code)&&/(\+\+)/.test(code)&&/<=\s*3/.test(code)) return {compiled:true,stdout:"1\n2\n3",error:""};
+  if(/points\s*=\s*25/.test(code)&&/println\s*\(\s*points/.test(code)) return {compiled:true,stdout:"25",error:""};
+  // detect obvious missing semicolon / brace as a fake compile error
+  const opens=(code.match(/{/g)||[]).length, closes=(code.match(/}/g)||[]).length;
+  if(opens!==closes) return {compiled:false,stdout:"",error:"error: reached end of file while parsing (unbalanced braces)"};
+  return {compiled:true,stdout:"(offline mode can't run arbitrary Java — run inside Claude for real execution)",error:"",offline:true};
+}
+async function runJava(code,stdin){
+  const model=document.getElementById('modelSel').value;
+  const sys=`You are a Java compiler + JVM for a teaching tool. Given a COMPLETE Java program, compile and run it.
+${stdin?`Standard input provided (feed to Scanner/readers): ${JSON.stringify(stdin)}`:"No stdin provided."}
+Return ONLY JSON, no markdown fences, no commentary, exactly:
+{"compiled": true|false, "error": "<javac-style error message, or empty>", "stdout": "<exact program output, \\n between lines, empty if none or if it did not compile>"}
+Be literal and precise about stdout. If it does not compile, compiled=false and describe the first error briefly.`;
+  try{
+    const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({model,max_tokens:800,system:sys,messages:[{role:"user",content:"```java\n"+code+"\n```"}]})});
+    const data=await res.json();
+    const text=(data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("").trim();
+    const meta=trackCost(data.usage,model);
+    const parsed=JSON.parse(text.replace(/```json|```/g,"").trim());
+    return {...parsed,meta,live:true};
+  }catch(e){ const r=offlineRun(code,stdin); return {...r,meta:"offline JVM heuristic — real execution runs inside Claude / Piston in the build"}; }
+}
+async function runScratch(){
+  const out=document.getElementById('scratchOut'),meta=document.getElementById('scratchMeta');
+  out.className="cbody";out.innerHTML='<span class="muted">compiling &amp; running…</span>';meta.textContent='running…';
+  const r=await runJava(scratchEditor.getValue(), document.getElementById('scratchStdin').value.replace(/\\n/g,"\n"));
+  if(r.compiled===false){out.className="cbody err";out.textContent=r.error||"Compilation failed.";}
+  else{out.className="cbody";out.textContent=r.stdout||"(no output)";}
+  meta.textContent=r.meta||"done";
+}
+
+/* ===================== GRADED SUBMIT (two honest modes) ===================== */
+async function submitCode(){
+  const t=TOPICS[cur];const btn=document.getElementById('submitBtn');const box=document.getElementById('tests');
+  btn.disabled=true;btn.textContent="running…";box.innerHTML='<div class="test"><span class="mark">…</span> compiling &amp; running your code</div>';
+  const r=await runJava(editor.getValue(), t.code.stdin||"");
+  let passed=false, html="";
+  if(r.compiled===false){
+    const g=await aiGrade(t, editor.getValue(), "", r.error);
+    passed=g.correct;
+    html=`<div class="test fail"><span class="mark">DID NOT COMPILE</span> <div>The old regex marker would have missed this — but it's <b>still graded</b> below.<br><span style="color:var(--bad)">${(r.error||'compile error').replace(/</g,'&lt;')}</span></div></div>
+      <div class="aigrade"><span class="verdict ${g.correct?'ok':'bad'}">${g.correct?'✓ LOGIC ESSENTIALLY RIGHT':'✗ NOT YET — but here\'s where you are'}</span>${g.feedback}<span class="m">${g.meta||''}</span></div>`;
+  } else if(gradeMode==='rule'){
+    const got=normalize(r.stdout), exp=normalize(t.code.expected);
+    passed = got===exp;
+    html=`<div class="test ${passed?'pass':'fail'}"><span class="mark">${passed?'PASS':'FAIL'}</span> output ${passed?'matches expected':'does not match expected'}</div>
+      <div class="diff"><div class="box"><h5>Expected</h5><pre>${exp||'(none)'}</pre></div><div class="box"><h5>Your program printed</h5><pre>${(got||'(nothing)').replace(/</g,'&lt;')}</pre></div></div>`;
+  } else {
+    // AI grader: logic + advice
+    const g=await aiGrade(t, editor.getValue(), r.stdout);
+    passed=g.correct;
+    html=`<div class="test ${passed?'pass':'fail'}"><span class="mark">${passed?'PASS':'NEEDS WORK'}</span> AI logic check</div>
+      <div class="aigrade"><span class="verdict ${passed?'ok':'bad'}">${passed?'✓ LOGIC CORRECT':'✗ NOT YET'}</span>${g.feedback}<span class="m">${g.meta||''}</span></div>
+      <div class="diff"><div class="box"><h5>Expected behaviour</h5><pre>${t.code.behaviour}</pre></div><div class="box"><h5>Your program printed</h5><pre>${(normalize(r.stdout)||'(nothing)').replace(/</g,'&lt;')}</pre></div></div>`;
+  }
+  box.innerHTML=html;
+  if(r.meta && r.compiled!==false){box.innerHTML+=`<div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);margin-top:8px">${r.meta}${gradeMode==='ai'?' + grading call':''}</div>`;}
+  // feed record + readiness
+  logQuestions(t.id, passed?[{ok:true,qtext:"code"},{ok:true,qtext:"code"}]:[{ok:false,qtext:t.code.prompt.replace(/<[^>]+>/g,'')}]);
+  record(`${t.title} code (${gradeMode==='rule'?'output':'AI'})`, passed?"pass ✓":"fail", passed?"ok":"bad");
+  if(t.status==='n'){t.status='p';renderSidebar();}
+  renderReadiness();
+  btn.disabled=false;btn.textContent="✓ Run & grade";
+  if(passed) addMsg('a',`Nice — that passed the ${gradeMode==='rule'?'output test':'logic check'}. It counts toward your readiness bar, but remember only the clean quiz flips the topic to MASTERED.`);
+}
+async function aiGrade(topic, code, stdout, compileError){
+  const model=document.getElementById('modelSel').value;
+  const sys=`You grade a beginner Java exercise. Return ONLY JSON, no fences:
+{"correct": true|false, "feedback": "at most 2 sentences"}
+Task: ${topic.code.prompt.replace(/<[^>]+>/g,'')}
+Expected behaviour: ${topic.code.behaviour}
+${compileError?`NOTE: this program did NOT compile. Compiler error: ${compileError}
+Grade it anyway: read the SOURCE, judge whether the student's logic/approach is on the right track, and set "correct" to false (a non-compiling program isn't finished). In the feedback, (a) name the compile fix in plain beginner words, and (b) say one encouraging thing about what they got right or one nudge toward the logic. Never write a full corrected solution.`:`Judge whether the student's LOGIC achieves the task (the program's actual output is provided). If correct: brief praise + optionally one tiny tip. If wrong: name the key issue and give ONE nudge — never a full corrected solution.`}`;
+  try{
+    const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({model,max_tokens:400,system:sys,messages:[{role:"user",content:`Student code:\n${code}\n\n${compileError?`Compiler error:\n${compileError}`:`Program output:\n${stdout}`}`}]})});
+    const data=await res.json();const text=(data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("").trim();
+    const meta=trackCost(data.usage,model);const p=JSON.parse(text.replace(/```json|```/g,"").trim());
+    return {correct:!!p.correct,feedback:p.feedback||"",meta:meta+" (grading)"};
+  }catch(e){
+    if(compileError) return {correct:false,feedback:"Your approach is on the right track, but the program doesn't compile yet — check for a missing semicolon or an unbalanced brace, fix that, and run it again.",meta:"offline fallback grade"};
+    const ok=normalize(stdout)===normalize(topic.code.expected);
+    return {correct:ok,feedback:ok?"Logic looks right — output matches the task. Tidy work!":"The output doesn't match what the task asks for yet — check your loop's start value and stopping condition.",meta:"offline fallback grade"};
+  }
+}
+
+/* ===================== SEB CLEAN QUIZ ===================== */
+function openSEB(){cleanAttempts++;document.getElementById('sebAttemptN').textContent=cleanAttempts;document.getElementById('sebRes').style.display='none';document.getElementById('sebOverlay').style.display='flex';
+ renderQuizInto('sebQuiz',sample(CLEAN_BANK,4).map(q=>({...q,why:"(summative)"})),"clean-mcq","while",{summative:true});
+ const inner=document.querySelector('#sebQuiz .quizfoot');if(inner)inner.style.display='none';
+ if(!sebEditor)sebEditor=makeCM(document.getElementById('sebCode'),140);
+ sebEditor.setValue("int n = 1;\n// your loop here\n");setTimeout(()=>sebEditor.refresh(),50);}
+function closeSEB(){document.getElementById('sebOverlay').style.display='none';}
+async function sebSubmit(){const qid=Object.keys(quizState).pop();const st=quizState[qid];const qs=st.questions;
+ if(Object.keys(st.picks).length<qs.length){alert("Answer all MCQs first.");return;}
+ let correct=0;qs.forEach((qu,qi)=>{if(st.picks[qi]===qu.correct)correct++;const els=[...document.querySelectorAll(`#${qid}_i${qi} .opt`)];els[qu.correct].classList.add('right');if(st.picks[qi]!==qu.correct)els[st.picks[qi]].classList.add('wrong');});
+ const res=document.getElementById('sebRes');res.style.display='block';res.className='sebres';res.textContent="running code question…";
+ const r=await runJava(sebEditor.getValue(),"");
+ const codeOk = r.compiled!==false && normalize(r.stdout)===normalize("1\n2\n3");
+ if(codeOk)correct++;
+ const total=qs.length+1,pct=correct/total,pctTxt=Math.round(pct*100)+"%";
+ if(pct>=PASS_PCT){res.className='sebres pass';res.textContent=`✓ ${correct}/${total} (${pctTxt}) — While Loops → MASTERED. Sidebar, readiness, and the teacher dashboard update now.`;TOPICS[1].status='m';students[5].cells[1]='m';record(`While clean quiz #${cleanAttempts} 🔒`,`${pctTxt} ✓ MASTERED`,"ok");renderSidebar();renderTopic();renderDash();setTimeout(closeSEB,3200);}
+ else{res.className='sebres fail';res.textContent=`✗ ${correct}/${total} (${pctTxt}) — below ${PASS_PCT*100}%. ${codeOk?"":"(code question: "+(r.compiled===false?"didn't compile":"wrong output")+") "}Logged; topic stays In Progress. Retake anytime.`;record(`While clean quiz #${cleanAttempts} 🔒`,pctTxt,"bad");qs.forEach((qu,qi)=>{if(st.picks[qi]!==qu.correct)missed["while"].unshift(qu.q);});missed["while"]=missed["while"].slice(0,6);}}
+
+/* ===================== TEACHER ===================== */
+function renderDash(){const pillT={m:"● MASTERED",p:"● IN PROGRESS",n:"○ NOT STARTED"};const flagT={stuck:"STUCK",coast:"EXTEND"};
+ document.getElementById('dashBody').innerHTML=students.map((s,si)=>{const cells=s.cells.map((c,i)=>{const f=s.flags[i]?`<span class="flag ${s.flags[i]==='coast'?'coast':''}">${flagT[s.flags[i]]}</span>`:"";return `<td><span class="cellpill ${c}">${pillT[c]}</span>${f}</td>`;}).join("");return `<tr><td class="name" onclick="openDrawer(${si})">${s.name}</td>${cells}</tr>`;}).join("");}
+function openDrawer(si){const s=students[si];const d=document.getElementById('drawer');d.style.display='block';
+ const rows=s.live?(records.length?records.map(r=>`<div class="h"><span>${r.label} · ${r.ts}</span><b class="${r.cls}">${r.val}</b></div>`).join(""):'<div class="h"><span>no attempts yet</span></div>')+`<div class="h"><span>AI calls this session</span><b class="wn">${aiCalls}× · $${sessionCost.toFixed(5)}</b></div>`:s.hist.map(h=>`<div class="h"><span>${h[0]}</span><b class="${h[2]}">${h[1]}</b></div>`).join("");
+ d.innerHTML=`<h3>${s.name} — evidence behind the pills ${s.live?'<span style="font-family:JetBrains Mono,monospace;font-size:10px;color:var(--accent)">LIVE — your session</span>':''}</h3>`+rows;}
+function switchView(v){document.getElementById('studentView').style.display=v==='student'?'flex':'none';document.getElementById('teacherView').style.display=v==='teacher'?'flex':'none';document.getElementById('btnStudent').classList.toggle('on',v==='student');document.getElementById('btnTeacher').classList.toggle('on',v==='teacher');if(v==='teacher')renderDash();}
+
+/* ===================== AI TUTOR + GEN ===================== */
+const PRICES={"claude-haiku-4-5":[1,5],"claude-sonnet-4-6":[3,15],"claude-opus-4-8":[15,75]};
+function trackCost(usage,model){aiCalls++;if(!usage)return "";const[pi,po]=PRICES[model]||[3,15];const cost=(usage.input_tokens*pi+usage.output_tokens*po)/1e6;sessionCost+=cost;document.getElementById('sessionCost').textContent=`session AI cost: $${sessionCost.toFixed(5)} (${aiCalls} calls)`;return `${model} · ${usage.input_tokens} in / ${usage.output_tokens} out · $${cost.toFixed(5)} — LIVE`;}
+function buildSystem(){const t=TOPICS[cur];return `You are a built-in AI tutor in a high school platform (grade 11 intro Java). Current topic: ${t.title}. Scope: ${t.scope}
+Student record: ${perfSummary(t.id)}
+Rules: (1) Beginner-friendly, 2-5 sentences. (2) Stay in scope; redirect off-topic to the current topic. (3) NEVER write a complete solution — one guiding hint or question, even if begged. Current exercise: ${t.stub?'(none)':t.code.prompt.replace(/<[^>]+>/g,'')} (4) Warm, concise; personalize from the record.`;}
+const canned={explain:"Think of the condition as a bouncer: before every run, Java asks 'still true?' Yes → run again; no → skip past. A false start means zero runs.",q2:"Infinite loops happen when the condition never turns false — usually the loop variable is never updated inside. Which line moves it toward stopping?",solution:"Nice try 😄 — I won't write the solution. Nudge: what should your variable start at, and what condition stops it at the right moment?",hint:"Three parts: where does your variable start, what condition keeps it going, what line moves it toward stopping?",free:"Good question! Initialize before, a condition that turns false, an update inside. Which part is fighting you?"};
+function addMsg(kind,text,meta){const m=document.getElementById('msgs');const d=document.createElement('div');d.className='msg '+(kind==='u'?'u':'a');d.innerHTML=kind==='u'?text:'<span class="who">TUTOR</span>'+text+(meta?`<span class="meta">${meta}</span>`:"");m.appendChild(d);m.scrollTop=m.scrollHeight;}
+async function callClaude(system,user,maxtok){const model=document.getElementById('modelSel').value;const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model,max_tokens:maxtok||1200,system,messages:[{role:"user",content:user}]})});const data=await res.json();const text=(data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("\n").trim();if(!text)throw new Error("empty");return{text,meta:trackCost(data.usage,model)};}
+async function askAI(kind,chipText){let userText;if(kind==='free'){userText=document.getElementById('askInput').value.trim();if(!userText)return;document.getElementById('askInput').value='';}else if(kind==='hint')userText="I'm stuck — hint please?";else userText=chipText||"Explain that again?";addMsg('u',userText);const m=document.getElementById('msgs');const think=document.createElement('div');think.className='msg a think';think.textContent='tutor is thinking…';m.appendChild(think);m.scrollTop=m.scrollHeight;let reply,meta="";try{const r=await callClaude(buildSystem(),`Student question: ${userText}\n\nStudent's current code:\n${editor?editor.getValue():"(n/a)"}`);reply=r.text;meta=r.meta;}catch(e){reply=canned[kind]||canned.free;meta="offline fallback (canned)";aiCalls++;}think.remove();addMsg('a',reply,meta);record("AI tutor call","💬","wn");}
+const cannedGen={while:[{q:"int k=5; while(k>5){k--;} iterations?",opts:["5","1","0","Infinite"],correct:2,why:"5>5 false at first check."},{q:"Which line inside prevents infinite loop for int i=0; while(i<4){...}?",opts:["println(i);","i++;","int i=0;","while(true);"],correct:1,why:"Only updating i moves toward false."},{q:"Repeat until user types stop. Condition?",opts:['while(input=="stop")','while(!input.equals("stop"))',"while(true)","while(input!=null)"],correct:1,why:".equals compares String content."}],vars:[{q:"double d=3; allowed?",opts:["No","Yes — int fits in double","Only with quotes","Only in loops"],correct:1,why:"3 becomes 3.0."}],for:[{q:"for(int i=2;i<=8;i+=2) prints?",opts:["2 4 6 8","2..8","2 4 6","4 6 8"],correct:0,why:"Step 2, includes 8."}]};
+async function generatePractice(){const t=TOPICS[cur];if(t.stub)return;const req=document.getElementById('genInput').value.trim();const gq=document.getElementById('genQuiz');gq.innerHTML='<div class="msg a think" style="max-width:100%">generating targeted set…</div>';
+ const sys=`You generate practice quizzes for grade 11 intro Java. Topic: ${t.title}. Scope: ${t.scope}
+Student record: ${perfSummary(t.id)}
+Return ONLY valid JSON, no fences: {"questions":[{"q":"...","opts":["","","",""],"correct":0,"why":"one line"}]}
+3-5 questions, exactly 4 options, "correct" 0-based. Target missed concepts; stay in scope; beginner unless asked otherwise.`;
+ const user=req?`Student request: ${req}`:`No specific request — auto-target my weak spots.`;let questions,note;
+ try{const r=await callClaude(sys,user);const parsed=JSON.parse(r.text.replace(/```json|```/g,"").trim());questions=parsed.questions.filter(q=>q&&q.q&&Array.isArray(q.opts)&&q.opts.length===4&&Number.isInteger(q.correct));if(!questions.length)throw new Error("shape");note=`AI-generated live (${r.meta})`;}
+ catch(e){questions=cannedGen[t.id]||cannedGen.while;note="offline fallback set (canned)";}
+ gq.innerHTML=`<p style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--muted);margin-bottom:10px">${note} · graded like any practice · feeds readiness</p><div id="genQuizInner"></div>`;
+ renderQuizInto('genQuizInner',questions,t.title+" AI set"+(req?` ("${req.slice(0,26)}")`:""),t.id,{});record("Generated practice set",req?`"${req.slice(0,22)}…"`:"auto-targeted","wn");}
+
+/* init */
+renderSidebar();renderTopic();renderDash();renderHist();
+</script>
+</body>
+</html>

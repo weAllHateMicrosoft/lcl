@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>classOS — Java Lessons (Unit 2)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700;9..144,900&family=Public+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1a1c1e; --paper:#f7f5f0; --accent:#0d5c46; --accent-2:#e0532f;
+    --line:#d8d3c8; --muted:#6b6f66; --card:#fff; --ok:#0d5c46; --bad:#b0483a; --violet:#5b5f9e; --amber:#c98a10;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Public Sans',sans-serif;background:var(--paper);color:var(--ink);line-height:1.62;font-size:16px}
+  .topbar{background:var(--ink);color:var(--paper);display:flex;align-items:center;gap:14px;padding:12px 22px;position:sticky;top:0;z-index:20}
+  .topbar .logo{font-family:'Fraunces',serif;font-weight:900;font-size:18px}
+  .topbar .logo em{color:#7fd6b8;font-style:normal}
+  .topbar .proto{font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.12em;color:#b9bcb2;border:1px solid #4a4d47;border-radius:99px;padding:3px 10px}
+  .topbar .spacer{flex:1}
+  .topbar .prog{font-family:'JetBrains Mono',monospace;font-size:11px;color:#b9bcb2}
+  .shell{display:flex}
+  /* nav */
+  .nav{width:290px;flex-shrink:0;border-right:1.5px solid var(--line);background:#f1eee6;height:calc(100vh - 53px);overflow-y:auto;position:sticky;top:53px;padding:20px 14px}
+  .unit{margin-bottom:16px}
+  .unit h3{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);padding:0 10px;margin-bottom:8px;display:flex;justify-content:space-between}
+  .unit.soon h3 span.s{color:var(--accent-2)}
+  .lrow{display:flex;gap:10px;align-items:baseline;width:100%;text-align:left;background:transparent;border:none;border-radius:9px;padding:8px 10px;font-size:13.5px;font-weight:500;color:var(--ink);cursor:pointer;line-height:1.4}
+  .lrow:hover{background:#e9e5da}
+  .lrow.on{background:var(--card);box-shadow:2px 2px 0 rgba(26,28,30,.1);font-weight:700}
+  .lrow.locked{color:#b3ada0;cursor:default}
+  .lrow .num{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent);flex-shrink:0;font-weight:600}
+  .lrow.locked .num{color:#c7c2b6}
+  .lrow.done .num::after{content:" ✓";color:var(--ok)}
+  /* content */
+  .content{flex:1;max-width:820px;margin:0 auto;padding:42px 48px 120px}
+  .lgoalcard{border:1.5px solid var(--ink);border-radius:14px;overflow:hidden;margin-bottom:30px;box-shadow:5px 5px 0 rgba(26,28,30,.08)}
+  .lgoalcard .top{background:var(--ink);color:var(--paper);padding:8px 20px;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.1em;display:flex;justify-content:space-between}
+  .lgoalcard .top em{color:#7fd6b8;font-style:normal}
+  .lgoalcard .mid{padding:20px 24px}
+  .lgoalcard h1{font-family:'Fraunces',serif;font-weight:900;font-size:33px;line-height:1.08;letter-spacing:-.01em;margin-bottom:10px}
+  .lgoalcard .goal{font-size:16px;color:var(--ink)}
+  .lgoalcard .goal b{color:var(--accent)}
+  h2.sec{font-family:'Fraunces',serif;font-weight:700;font-size:22px;margin:34px 0 12px;padding-bottom:6px;border-bottom:2px solid var(--line)}
+  p{margin-bottom:14px}
+  .content ul,.content ol{margin:0 0 14px 24px}
+  .content li{margin-bottom:6px}
+  code{font-family:'JetBrains Mono',monospace;font-size:14px;background:#eee9de;padding:1px 6px;border-radius:5px}
+  strong{font-weight:700}
+  .lead{font-size:17px;color:#3a3d38}
+  /* code block */
+  .codeblock{margin:16px 0;border-radius:12px;overflow:hidden;border:1.5px solid #2a2d25}
+  .codeblock .cbh{background:#12140f;color:#8b9186;font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.1em;padding:6px 14px;display:flex;justify-content:space-between}
+  pre.code{font-family:'JetBrains Mono',monospace;font-size:13.5px;background:#1e211f;color:#dfe6db;padding:15px 18px;overflow-x:auto;line-height:1.6;margin:0}
+  pre.code .kw{color:#8fd6b4}
+  pre.code .ty{color:#7fb0e0}
+  pre.code .st{color:#e8b26a}
+  pre.code .cm{color:#7d857c;font-style:italic}
+  pre.code .nm{color:#e0906a}
+  .out{background:#0f120d;color:#b7d3ad;font-family:'JetBrains Mono',monospace;font-size:13px;padding:11px 18px;border-top:1px dashed #2a2d25;white-space:pre-wrap}
+  .out .lbl{color:#5f6b58;display:block;font-size:9.5px;letter-spacing:.12em;margin-bottom:4px}
+  /* callouts */
+  .callout{border-radius:12px;padding:16px 20px;margin:18px 0;border-left:4px solid}
+  .callout .ch{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:600;margin-bottom:8px;display:flex;align-items:center;gap:8px}
+  .callout p:last-child{margin-bottom:0}
+  .callout.mistake{background:#f9ebe7;border-color:var(--accent-2)} .callout.mistake .ch{color:var(--accent-2)}
+  .callout.tip{background:#e7f2ec;border-color:var(--accent)} .callout.tip .ch{color:var(--accent)}
+  .callout.note{background:#eef0f7;border-color:var(--violet)} .callout.note .ch{color:var(--violet)}
+  /* terms */
+  .terms{background:#f1eee6;border:1px solid var(--line);border-radius:12px;padding:16px 20px;margin:18px 0}
+  .terms h4{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+  .terms dl{display:grid;grid-template-columns:auto 1fr;gap:6px 16px}
+  .terms dt{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600;color:var(--accent)}
+  .terms dd{font-size:14.5px}
+  /* check + tryit */
+  .check{border:1.5px dashed var(--accent);border-radius:12px;padding:16px 20px;margin:22px 0;background:#fbfdfb}
+  .check h4{font-family:'Fraunces',serif;font-size:17px;margin-bottom:10px;color:var(--accent)}
+  .cq{margin-bottom:10px}
+  .cq .q{font-weight:600}
+  .cq .a{font-size:14.5px;color:var(--muted);margin-top:3px;display:none;padding-left:14px;border-left:2px solid var(--line)}
+  .cq.show .a{display:block}
+  .reveal{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent);cursor:pointer;background:none;border:none;padding:2px 0;text-decoration:underline}
+  .tryit{border:1.5px solid var(--ink);border-radius:12px;padding:16px 20px;margin:22px 0;background:#fff}
+  .tryit h4{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.08em;color:var(--accent-2);margin-bottom:8px}
+  .tryit .plabel{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);margin-top:8px}
+  /* footer nav */
+  .pager{display:flex;justify-content:space-between;margin-top:44px;padding-top:20px;border-top:1.5px solid var(--line);gap:12px}
+  .pager button{font-family:inherit;border:1.5px solid var(--ink);background:#fff;border-radius:10px;padding:12px 18px;cursor:pointer;font-weight:600;font-size:14px;max-width:48%;text-align:left}
+  .pager button:hover{background:#eee9de}
+  .pager button:disabled{opacity:.4;cursor:not-allowed}
+  .pager .dir{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);display:block}
+  .pager .nxt{text-align:right}
+  @media(max-width:880px){.nav{display:none}.content{padding:28px 20px 100px}}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="logo">class<em>OS</em></div>
+  <div class="proto">LESSON CONTENT · UNIT 2 COMPLETE</div>
+  <div class="spacer"></div>
+  <div class="prog" id="prog"></div>
+</div>
+<div class="shell">
+  <nav class="nav" id="nav"></nav>
+  <main class="content" id="content"></main>
+</div>
+
+<script>
+/* =========================================================================
+   LESSON CONTENT MODULE  (Unit 2 — Basic Java, all 15 lessons)
+   Each lesson: {id, code, title, goal, body[]}. body blocks:
+     {t:'p', html}                          prose (html allowed)
+     {t:'h', text}                          section heading
+     {t:'code', code, out}                  code sample + expected output
+     {t:'mistake'|'tip'|'note', title, html} callout
+     {t:'terms', items:[[term,def],...]}    vocabulary
+     {t:'check', items:[[q,a],...]}         concept checks (answer hidden)
+     {t:'try', html, meta}                  exercise prompt (feeds the platform)
+   This object drops straight into the platform: TOPICS[i].lesson = render(LESSONS[id]).
+   ========================================================================= */
+const LESSONS = [
+{id:"2.1", title:"Printing in Java", goal:'Display text and numbers on the screen with <b>System.out.println</b>, and control formatting with escape sequences.',
+ body:[
+  {t:'p',html:'Every program needs to communicate with the person using it. In Java, the most basic way to send information to the screen is to <strong>print</strong> it. Almost every program you write will start by printing something, so this is where we begin.'},
+  {t:'h',text:'Your first printed line'},
+  {t:'p',html:'Java code lives inside a <strong>class</strong> and runs starting from a special method called <code>main</code>. For now, treat the outer lines as a fixed frame you write your code inside — we will unpack them properly in Unit 3.'},
+  {t:'code',code:`public class Main {
+    public static void main(String[] args) {
+        System.out.println("Hello, world!");
+    }
+}`,out:`Hello, world!`},
+  {t:'p',html:'The important line is <code>System.out.println("Hello, world!");</code>. Read it as a command: "System, on your output, print this line." Three things to notice:'},
+  {t:'p',html:'<strong>1. The text goes in double quotes.</strong> Anything inside <code>"..."</code> is a <strong>String</strong> — a piece of literal text — and Java prints it exactly as written. <strong>2. Every statement ends with a semicolon <code>;</code></strong> — this is how Java knows one instruction has finished. <strong>3. <code>println</code> adds a new line</strong> at the end, so the next thing printed starts fresh below.'},
+  {t:'h',text:'println vs print'},
+  {t:'p',html:'There are two printing commands. <code>println</code> ("print line") moves to a new line afterward. <code>print</code> stays on the same line.'},
+  {t:'code',code:`System.out.print("Hello, ");
+System.out.print("world!");
+System.out.println();          // prints just a line break
+System.out.println("Next line");`,out:`Hello, world!
+Next line`},
+  {t:'h',text:'Escape sequences'},
+  {t:'p',html:'Some characters are hard to type directly inside a String — like a new line, or a quotation mark (which would look like the end of your text). Java solves this with <strong>escape sequences</strong>: a backslash <code>\\</code> followed by a letter that stands for a special character.'},
+  {t:'terms',items:[['\\n','New line — moves to the next line'],['\\t','Tab — inserts horizontal spacing'],['\\"','A literal double-quote character'],['\\\\','A literal backslash']]},
+  {t:'code',code:`System.out.println("Line one\\nLine two");
+System.out.println("Name:\\tAva");
+System.out.println("She said \\"hi\\"");`,out:`Line one
+Line two
+Name:\tAva
+She said "hi"`},
+  {t:'h',text:'Printing numbers and joining pieces'},
+  {t:'p',html:'You can print numbers directly (no quotes — they are values, not text), and you can join pieces together with the <code>+</code> operator, called <strong>concatenation</strong> when text is involved.'},
+  {t:'code',code:`System.out.println(42);
+System.out.println("Score: " + 42);
+System.out.println("Sum: " + (3 + 4));`,out:`42
+Score: 42
+Sum: 7`},
+  {t:'note',title:'Why the parentheses around (3 + 4)?',html:'Without them, <code>"Sum: " + 3 + 4</code> reads left to right: it first joins the text to <code>3</code> (making "Sum: 3"), then joins <code>4</code> to that, giving <code>Sum: 34</code>. The parentheses force the addition to happen first. You will meet this rule again in 2.4.'},
+  {t:'mistake',title:'Common beginner mistakes',html:'<strong>Forgetting the semicolon</strong> — every statement needs one; leaving it off is the #1 cause of "it won\'t compile." <strong>Forgetting the quotes</strong> — <code>System.out.println(Hello);</code> makes Java look for a <em>variable</em> named Hello and fail. <strong>Using smart/curly quotes</strong> — copy-pasting from a document can insert " " instead of straight " ", which Java rejects.'},
+  {t:'check',items:[
+    ['What is the difference between <code>print</code> and <code>println</code>?','<code>println</code> moves to a new line after printing; <code>print</code> stays on the same line.'],
+    ['What does <code>"a\\nb"</code> print?','Two lines: <code>a</code> then <code>b</code>. <code>\\n</code> is a newline.'],
+    ['Why does <code>"Sum: " + 3 + 4</code> print <code>Sum: 34</code> instead of <code>Sum: 7</code>?','Java works left to right: text + number becomes text, so both numbers are glued on as characters. Use <code>(3 + 4)</code> to add first.']]},
+  {t:'try',html:'Print a three-line "business card": your name, a title, and an email — each on its own line. Use a single <code>println</code> with <code>\\n</code>, then rewrite it using three separate <code>println</code> calls.',meta:'checks: 3 lines of output'}
+ ]},
+
+{id:"2.2", title:"Variables and Types", goal:'Store, name, and reuse values using <b>variables</b>, and choose the right <b>type</b> for each kind of data.',
+ body:[
+  {t:'p',html:'A <strong>variable</strong> is a named box in memory that holds a value you want to keep and reuse. Instead of writing the number <code>25</code> in ten places, you store it once in a variable and refer to it by name — and if it needs to change, you change it in one spot.'},
+  {t:'h',text:'Declaring a variable'},
+  {t:'p',html:'To make a variable you write its <strong>type</strong>, then its <strong>name</strong>, then (usually) an <strong>=</strong> and a starting value. This is called <strong>declaring</strong> and <strong>initializing</strong>.'},
+  {t:'code',code:`int age = 17;
+double price = 4.99;
+boolean isOpen = true;
+String name = "Ava";
+
+System.out.println(name + " is " + age);`,out:`Ava is 17`},
+  {t:'p',html:'Read <code>int age = 17;</code> as: "make an integer box called <code>age</code> and put 17 in it." The <code>=</code> is not "equals" in the math sense — it means <strong>assignment</strong>: "take the value on the right and store it in the box on the left."'},
+  {t:'h',text:'The four types you need first'},
+  {t:'terms',items:[
+    ['int','Whole numbers, positive or negative: -3, 0, 42. No decimal point.'],
+    ['double','Numbers with decimals: 3.14, -0.5, 2.0.'],
+    ['boolean','A truth value — exactly true or false. Nothing else.'],
+    ['String','Text, in double quotes: "hello". (Technically not a primitive, but you use it constantly.)']]},
+  {t:'note',title:'Also: char',html:'A <code>char</code> holds a single character in <strong>single</strong> quotes: <code>char grade = \'A\';</code>. You will see it occasionally; <code>String</code> covers most text needs.'},
+  {t:'h',text:'Changing a variable'},
+  {t:'p',html:'Once declared, you can reassign a variable — but you only state the type <strong>once</strong>, when you first create it. After that, just use the name.'},
+  {t:'code',code:`int score = 10;
+score = score + 5;      // read old value (10), add 5, store 15 back
+score = 100;            // replace entirely
+System.out.println(score);`,out:`100`},
+  {t:'h',text:'Naming rules and conventions'},
+  {t:'p',html:'Names must start with a letter (or <code>_</code>/<code>$</code>), contain no spaces, and cannot be Java keywords like <code>int</code>. Beyond the rules, Java programmers follow <strong>camelCase</strong>: start lowercase, capitalize each new word — <code>firstName</code>, <code>totalScore</code>, <code>isGameOver</code>. Good names describe what the box holds.'},
+  {t:'mistake',title:'Common beginner mistakes',html:'<strong>Type mismatch:</strong> <code>int age = "17";</code> fails — <code>"17"</code> is text (a String), not a number. Drop the quotes. <strong>Redeclaring:</strong> writing <code>int score</code> twice creates a conflict; only declare once. <strong>Using before assigning:</strong> a variable with no value can\'t be used yet — always give it a starting value. <strong>Putting a decimal in an int:</strong> <code>int x = 3.5;</code> fails because <code>int</code> holds whole numbers only.'},
+  {t:'check',items:[
+    ['Which type best fits a person\'s exact bank balance, like 42.50?','<code>double</code> — it has a decimal part. <code>int</code> would lose the cents.'],
+    ['What is wrong with <code>boolean done = "false";</code>?','The quotes make it a String. A boolean uses the bare word: <code>boolean done = false;</code>'],
+    ['After <code>int n = 4; n = n + 1;</code>, what is <code>n</code>?','5 — the right side is computed first (4 + 1), then stored back into n.']]},
+  {t:'try',html:'Declare variables for a product: a <code>String</code> name, an <code>int</code> quantity, and a <code>double</code> price. Print a line like <code>3 x Notebook @ 4.99</code> by concatenating them.',meta:'checks: uses int, double, String; prints combined line'}
+ ]},
+
+{id:"2.3", title:"User Input", goal:'Read what the user types using a <b>Scanner</b>, so your programs can respond to real input.',
+ body:[
+  {t:'p',html:'So far your programs only speak — they print. To listen, Java uses a tool called <strong>Scanner</strong> that reads what the user types at the keyboard. This is what turns a static program into an interactive one, like the guessing game.'},
+  {t:'h',text:'Setting up a Scanner'},
+  {t:'p',html:'Scanner lives in Java\'s library, so you must <strong>import</strong> it at the very top of your file, then create one connected to the keyboard (<code>System.in</code>).'},
+  {t:'code',code:`import java.util.Scanner;      // at the top of the file
+
+public class Main {
+    public static void main(String[] args) {
+        Scanner input = new Scanner(System.in);
+
+        System.out.print("What is your name? ");
+        String name = input.nextLine();
+
+        System.out.println("Hello, " + name + "!");
+    }
+}`,out:`What is your name? Ava
+Hello, Ava!`},
+  {t:'p',html:'The pattern is always the same: <strong>print a prompt</strong> so the user knows what to type, then <strong>read their answer</strong> into a variable.'},
+  {t:'h',text:'Reading different types'},
+  {t:'p',html:'Which method you call depends on what you expect the user to type:'},
+  {t:'terms',items:[
+    ['input.nextLine()','Reads an entire line of text as a String.'],
+    ['input.nextInt()','Reads a whole number as an int.'],
+    ['input.nextDouble()','Reads a decimal number as a double.'],
+    ['input.next()','Reads a single word (stops at the first space).']]},
+  {t:'code',code:`System.out.print("Enter your age: ");
+int age = input.nextInt();
+System.out.println("Next year you'll be " + (age + 1));`,out:`Enter your age: 17
+Next year you'll be 18`},
+  {t:'mistake',title:'The famous nextLine() trap',html:'When you call <code>nextInt()</code> or <code>nextDouble()</code> and then call <code>nextLine()</code> afterward, the <code>nextLine()</code> often reads an empty line and seems to "skip" the user. This is because <code>nextInt()</code> leaves the invisible Enter keypress behind, and <code>nextLine()</code> grabs it. The fix: add an extra <code>input.nextLine();</code> right after <code>nextInt()</code> to swallow that leftover, before reading real text.'},
+  {t:'note',title:'Where does input come from in the platform?',html:'In the coding exercises and clean quizzes, "typed" input is supplied to your program automatically (the stdin field). Your job is to read it with Scanner exactly as if a person were typing.'},
+  {t:'check',items:[
+    ['Why do you print a prompt before reading input?','So the user knows what the program expects — otherwise it looks frozen.'],
+    ['You need to read a decimal like 3.5. Which method?','<code>nextDouble()</code>.'],
+    ['What line do you add to avoid the nextInt-then-nextLine skip?','An extra <code>input.nextLine();</code> after the <code>nextInt()</code> to consume the leftover newline.']]},
+  {t:'try',html:'Ask the user for two whole numbers and print their sum. Prompt before each read, and read with <code>nextInt()</code>.',meta:'stdin: two integers · checks: prints their sum'}
+ ]},
+
+{id:"2.4", title:"Arithmetic Expressions", goal:'Compute with <b>+ − * / %</b>, and avoid the traps of integer division and operator precedence.',
+ body:[
+  {t:'p',html:'Java does math with the operators you already know, plus one you might not: the <strong>remainder</strong> operator. The mechanics are simple, but two behaviours surprise nearly every beginner — so we will spend most of our time there.'},
+  {t:'terms',items:[
+    ['+','Addition (or String joining)'],['−','Subtraction'],['*','Multiplication'],
+    ['/','Division'],['%','Modulus — the remainder after division']]},
+  {t:'code',code:`System.out.println(7 + 3);   // 10
+System.out.println(7 - 3);   // 4
+System.out.println(7 * 3);   // 21
+System.out.println(7 % 3);   // 1  (7 / 3 is 2 remainder 1)`,out:`10
+4
+21
+1`},
+  {t:'h',text:'Trap #1: integer division'},
+  {t:'p',html:'When you divide two <strong>int</strong> values, Java gives an <strong>int</strong> back — it throws away any decimal part. It does not round; it truncates.'},
+  {t:'code',code:`System.out.println(7 / 2);       // 3, not 3.5
+System.out.println(1 / 2);       // 0, not 0.5
+System.out.println(7.0 / 2);     // 3.5  (one double is enough)`,out:`3
+0
+3.5`},
+  {t:'p',html:'The rule: if <strong>both</strong> sides are int, you get int division. Make at least one side a <code>double</code> (write <code>7.0</code>, or cast — see 2.5) to get a decimal result.'},
+  {t:'h',text:'What modulus is good for'},
+  {t:'p',html:'<code>%</code> answers "what\'s left over?" and it is more useful than it looks. <code>n % 2</code> is <code>0</code> for even numbers and <code>1</code> for odd — the standard even/odd test. <code>n % 10</code> gives the last digit of a number.'},
+  {t:'code',code:`int n = 14;
+System.out.println(n % 2);    // 0 -> even
+System.out.println(n % 10);   // 4 -> last digit`,out:`0
+4`},
+  {t:'h',text:'Trap #2: order of operations'},
+  {t:'p',html:'Java follows the usual math precedence: <code>*</code>, <code>/</code>, <code>%</code> happen before <code>+</code> and <code>−</code>. Use parentheses to force a different order or just to make your intent obvious.'},
+  {t:'code',code:`System.out.println(2 + 3 * 4);     // 14, not 20
+System.out.println((2 + 3) * 4);   // 20`,out:`14
+20`},
+  {t:'h',text:'Shortcuts you\'ll use constantly'},
+  {t:'p',html:'Updating a variable using its own value is so common that Java has shorthands. <code>x += 5</code> means <code>x = x + 5</code>. And <code>x++</code> adds exactly 1 — the workhorse of loops.'},
+  {t:'code',code:`int x = 10;
+x += 5;    // 15
+x -= 2;    // 13
+x++;       // 14
+System.out.println(x);`,out:`14`},
+  {t:'mistake',title:'Common beginner mistakes',html:'<strong>Expecting a decimal from int division:</strong> <code>double avg = 5 / 2;</code> stores <code>2.0</code>, not <code>2.5</code>, because <code>5 / 2</code> is computed as ints <em>first</em>. Write <code>5.0 / 2</code>. <strong>Forgetting precedence:</strong> <code>1 + 2 * 3</code> is 7, not 9. When in doubt, add parentheses.'},
+  {t:'check',items:[
+    ['What is <code>9 / 4</code> in Java, and why?','2 — both are ints, so the .25 is discarded (integer division).'],
+    ['How do you test whether an int <code>n</code> is even?','<code>n % 2 == 0</code> — even numbers leave no remainder when divided by 2.'],
+    ['What is <code>10 - 2 * 3</code>?','4 — multiplication happens before subtraction.']]},
+  {t:'try',html:'Read an int number of total minutes and print it as hours and minutes — e.g. 135 → "2 hours and 15 minutes". Use <code>/</code> for hours and <code>%</code> for the leftover minutes.',meta:'stdin: one integer · checks: correct hours and minutes'}
+ ]},
+
+{id:"2.5", title:"Casting", goal:'Convert values between types on purpose — widening automatically, narrowing with a <b>cast</b>.',
+ body:[
+  {t:'p',html:'Sometimes you have a value of one type but need it as another — an <code>int</code> where a <code>double</code> is expected, or a precise division where integer math would ruin the answer. Converting between types is called <strong>casting</strong>.'},
+  {t:'h',text:'Widening happens automatically'},
+  {t:'p',html:'Going from a "smaller" type to a "bigger" one — <code>int</code> into <code>double</code> — is safe (no information lost), so Java does it for you.'},
+  {t:'code',code:`int whole = 5;
+double d = whole;       // automatic: 5 becomes 5.0
+System.out.println(d);`,out:`5.0`},
+  {t:'h',text:'Narrowing needs an explicit cast'},
+  {t:'p',html:'Going the other way — <code>double</code> into <code>int</code> — can lose the decimal part, so Java makes you ask for it on purpose by writing the target type in parentheses. Casting to <code>int</code> <strong>truncates</strong> (chops off the decimal), it does not round.'},
+  {t:'code',code:`double price = 4.99;
+int dollars = (int) price;     // 4, not 5 — decimal chopped off
+System.out.println(dollars);`,out:`4`},
+  {t:'h',text:'The most important use: fixing integer division'},
+  {t:'p',html:'Remember from 2.4 that <code>int / int</code> loses the decimal. Casting one operand to <code>double</code> before dividing fixes it — this is where you will reach for casting most often.'},
+  {t:'code',code:`int total = 7, count = 2;
+double avg = (double) total / count;   // 3.5
+System.out.println(avg);`,out:`3.5`},
+  {t:'note',title:'Watch the order',html:'<code>(double) total / count</code> casts <code>total</code> first, then divides — correct. But <code>(double)(total / count)</code> does the int division <em>first</em> (getting 3), then converts to 3.0. The position of the cast matters.'},
+  {t:'mistake',title:'Common beginner mistakes',html:'<strong>Expecting rounding:</strong> <code>(int) 4.99</code> is 4, not 5 — casting chops, it doesn\'t round. To round, that\'s a different tool (<code>Math.round</code>). <strong>Casting too late:</strong> casting the <em>result</em> of int division (<code>(double)(1/2)</code> → 0.0) doesn\'t help; cast an operand <em>before</em> the division.'},
+  {t:'check',items:[
+    ['What is <code>(int) 7.8</code>?','7 — the cast truncates the decimal part.'],
+    ['Why is a cast required to put a double into an int, but not the reverse?','int → double loses nothing (safe, automatic); double → int can lose the decimal, so Java makes you confirm it.'],
+    ['How do you get 2.5 from <code>int a = 5, b = 2;</code>?','<code>(double) a / b</code> — cast before dividing so it\'s not integer division.']]},
+  {t:'try',html:'Read two integers and print their average as a decimal (e.g. 5 and 2 → 2.5). You will need a cast to avoid integer division.',meta:'stdin: two integers · checks: decimal average'}
+ ]},
+
+{id:"2.6", title:"Booleans", goal:'Work with <b>true/false</b> values and use them to represent yes/no facts in your programs.',
+ body:[
+  {t:'p',html:'A <strong>boolean</strong> is the simplest type in Java: it holds one of exactly two values, <code>true</code> or <code>false</code>. Booleans are how a program represents any yes/no fact — is the game over, is the input valid, did the user win — and they are the fuel that powers <code>if</code> statements and loops.'},
+  {t:'code',code:`boolean isRaining = true;
+boolean hasTicket = false;
+System.out.println(isRaining);    // true
+System.out.println(hasTicket);    // false`,out:`true
+false`},
+  {t:'p',html:'Notice: <code>true</code> and <code>false</code> are bare keywords — no quotes. <code>"true"</code> with quotes is a String, a completely different thing.'},
+  {t:'h',text:'Booleans usually come from comparisons'},
+  {t:'p',html:'You rarely type <code>true</code> yourself. More often, a boolean is the <em>result</em> of a comparison (covered fully in 2.8). A comparison like <code>age >= 18</code> evaluates to a boolean.'},
+  {t:'code',code:`int age = 20;
+boolean isAdult = age >= 18;
+System.out.println(isAdult);      // true`,out:`true`},
+  {t:'h',text:'Booleans as flags'},
+  {t:'p',html:'A common pattern is a <strong>flag</strong>: a boolean variable that remembers whether something has happened, and gets checked later.'},
+  {t:'code',code:`boolean found = false;
+// ... later, if we find what we want:
+found = true;
+System.out.println("Found it? " + found);`,out:`Found it? true`},
+  {t:'note',title:'Naming tip',html:'Boolean variables read best when named as a yes/no question: <code>isOpen</code>, <code>hasWon</code>, <code>gameOver</code>. Then <code>if (gameOver)</code> reads like plain English.'},
+  {t:'mistake',title:'Common beginner mistakes',html:'<strong>Quoting the value:</strong> <code>boolean b = "true";</code> is wrong — that\'s a String. Use <code>boolean b = true;</code>. <strong>Comparing to true needlessly:</strong> <code>if (isOpen == true)</code> works but is redundant — <code>if (isOpen)</code> says the same thing more clearly.'},
+  {t:'check',items:[
+    ['How many values can a boolean hold?','Exactly two: <code>true</code> or <code>false</code>.'],
+    ['What is the difference between <code>true</code> and <code>"true"</code>?','<code>true</code> is a boolean value; <code>"true"</code> is a String (text). They are not interchangeable.'],
+    ['What type does the expression <code>5 > 3</code> produce?','A boolean — in this case <code>true</code>.']]},
+  {t:'try',html:'Read an integer and store, in a boolean variable, whether it is positive. Print the boolean.',meta:'stdin: one integer · checks: prints true/false correctly'}
+ ]},
+
+{id:"2.7", title:"Logical Operators", goal:'Combine boolean conditions with <b>&& (and)</b>, <b>|| (or)</b>, and <b>! (not)</b>.',
+ body:[
+  {t:'p',html:'Real decisions often depend on more than one fact: "if it\'s a weekday <strong>and</strong> it\'s not raining." Java combines boolean values with three <strong>logical operators</strong>.'},
+  {t:'terms',items:[
+    ['&&','AND — true only when both sides are true'],
+    ['||','OR — true when at least one side is true'],
+    ['!','NOT — flips true to false and false to true']]},
+  {t:'h',text:'AND (&&) and OR (||)'},
+  {t:'code',code:`boolean sunny = true;
+boolean warm  = false;
+
+System.out.println(sunny && warm);   // false (needs both)
+System.out.println(sunny || warm);   // true  (needs one)`,out:`false
+true`},
+  {t:'p',html:'Think of <code>&&</code> as demanding: everything must be true. Think of <code>||</code> as forgiving: any one true is enough. A quick truth table:'},
+  {t:'code',code:`true  && true   -> true
+true  && false  -> false
+false && anything -> false
+
+true  || anything -> true
+false || false  -> false`,out:``},
+  {t:'h',text:'NOT (!)'},
+  {t:'p',html:'<code>!</code> reverses a boolean. It\'s useful for "if this is <em>not</em> true."'},
+  {t:'code',code:`boolean gameOver = false;
+System.out.println(!gameOver);       // true — the game is NOT over`,out:`true`},
+  {t:'h',text:'Combining them'},
+  {t:'p',html:'You can build bigger conditions. <code>!</code> binds tightest, then <code>&&</code>, then <code>||</code> — but parentheses make your meaning clear and are always allowed.'},
+  {t:'code',code:`int age = 20;
+boolean hasID = true;
+boolean canEnter = (age >= 18) && hasID;
+System.out.println(canEnter);        // true`,out:`true`},
+  {t:'mistake',title:'Common beginner mistakes',html:'<strong>Using a single <code>&</code> or <code>|</code>:</strong> Java has those too, but for combining conditions you almost always want the doubled <code>&&</code> and <code>||</code>. <strong>Writing math-style ranges:</strong> <code>0 < x < 10</code> does not work in Java. Write it as two conditions joined with AND: <code>0 < x && x < 10</code>.'},
+  {t:'check',items:[
+    ['When is <code>a && b</code> true?','Only when both <code>a</code> and <code>b</code> are true.'],
+    ['When is <code>a || b</code> false?','Only when both are false.'],
+    ['How do you express "x is between 1 and 10 inclusive"?','<code>x >= 1 && x <= 10</code> — two comparisons joined by AND.']]},
+  {t:'try',html:'Read an integer and print <code>true</code> if it is between 1 and 100 (inclusive) using a single boolean expression with <code>&&</code>.',meta:'stdin: one integer · checks: range test'}
+ ]},
+
+{id:"2.8", title:"Comparison Operators", goal:'Compare values with <b>== != &lt; &gt; &lt;= &gt;=</b> and learn why Strings need <b>.equals</b>.',
+ body:[
+  {t:'p',html:'To make decisions, a program compares values. Each comparison produces a <strong>boolean</strong> — <code>true</code> or <code>false</code> — which then feeds an <code>if</code> or a loop.'},
+  {t:'terms',items:[
+    ['==','Equal to'],['!=','Not equal to'],
+    ['&lt;','Less than'],['&gt;','Greater than'],
+    ['&lt;=','Less than or equal to'],['&gt;=','Greater than or equal to']]},
+  {t:'code',code:`int a = 5, b = 8;
+System.out.println(a == b);   // false
+System.out.println(a != b);   // true
+System.out.println(a < b);    // true
+System.out.println(a >= 5);   // true`,out:`false
+true
+true
+true`},
+  {t:'mistake',title:'The biggest trap: = vs ==',html:'A single <code>=</code> is <strong>assignment</strong> (put a value in a box). A double <code>==</code> is <strong>comparison</strong> (are these equal?). Writing <code>if (x = 5)</code> when you meant <code>if (x == 5)</code> is one of the most common beginner bugs. Comparison always uses <strong>two</strong> equals signs.'},
+  {t:'h',text:'Comparing Strings: use .equals, not =='},
+  {t:'p',html:'This one catches everyone. For Strings, <code>==</code> does <strong>not</strong> reliably check whether the text is the same — it checks whether they are the exact same object in memory, which often is not what you want. To compare the actual text, use the <code>.equals</code> method.'},
+  {t:'code',code:`String answer = "yes";
+System.out.println(answer.equals("yes"));   // true  — correct way
+System.out.println(answer == "yes");         // unreliable — avoid`,out:`true`},
+  {t:'note',title:'Rule of thumb',html:'Numbers and booleans: compare with <code>==</code>. Strings: compare with <code>.equals(...)</code>. For case-insensitive text matching, use <code>.equalsIgnoreCase(...)</code>.'},
+  {t:'mistake',title:'One more: comparing doubles',html:'Because decimals are stored approximately, <code>0.1 + 0.2 == 0.3</code> can be <code>false</code>. For beginner programs this rarely bites, but be aware that exact <code>==</code> on <code>double</code> is not always trustworthy.'},
+  {t:'check',items:[
+    ['What is the difference between <code>=</code> and <code>==</code>?','<code>=</code> assigns a value; <code>==</code> compares two values and returns a boolean.'],
+    ['How should you check if a String variable <code>s</code> equals "quit"?','<code>s.equals("quit")</code> — not <code>s == "quit"</code>.'],
+    ['What does <code>7 != 7</code> evaluate to?','<code>false</code> — 7 <em>is</em> equal to 7, so "not equal" is false.']]},
+  {t:'try',html:'Read a line of text and print whether it equals "java" (use <code>.equals</code>). Then read two integers and print whether the first is larger.',meta:'stdin: a word, then two integers'}
+ ]},
+
+{id:"2.9", title:"For Loops", goal:'Repeat code a known number of times with a compact <b>for</b> loop.',
+ body:[
+  {t:'p',html:'A <strong>loop</strong> repeats a block of code. When you know (or can compute) <em>how many times</em> you want to repeat — print 10 lines, count to 100, step through positions 0 to 9 — the <strong>for</strong> loop is the natural choice, because it keeps all its bookkeeping on one line.'},
+  {t:'h',text:'Anatomy of a for loop'},
+  {t:'code',code:`for (int i = 1; i <= 5; i++) {
+    System.out.println(i);
+}`,out:`1
+2
+3
+4
+5`},
+  {t:'p',html:'The header <code>for (init; condition; update)</code> has three parts, separated by semicolons:'},
+  {t:'terms',items:[
+    ['int i = 1','Initialization — runs once, before the loop starts. Creates the counter.'],
+    ['i <= 5','Condition — checked before each pass. While true, the body runs; when false, the loop ends.'],
+    ['i++','Update — runs after each pass. Usually moves the counter toward the stopping point.']]},
+  {t:'p',html:'The order of events: init → check condition → (if true) run body → update → check condition → … The counter <code>i</code> is a normal variable; you can use it inside the loop, print it, do math with it.'},
+  {t:'h',text:'Counting other ways'},
+  {t:'code',code:`for (int i = 10; i >= 1; i--) {     // count down
+    System.out.print(i + " ");
+}`,out:`10 9 8 7 6 5 4 3 2 1 `},
+  {t:'code',code:`for (int i = 0; i <= 10; i += 2) {  // step by 2
+    System.out.print(i + " ");
+}`,out:`0 2 4 6 8 10 `},
+  {t:'mistake',title:'Common beginner mistakes',html:'<strong>Off-by-one errors:</strong> <code>i &lt; 5</code> runs for i = 0,1,2,3,4 (five times), while <code>i &lt;= 5</code> runs six times (0–5). Decide whether your end value should be included and pick <code>&lt;</code> or <code>&lt;=</code> accordingly. <strong>Semicolon after the header:</strong> <code>for (...);</code> with a stray semicolon makes the loop body empty — a silent, confusing bug. <strong>Using <code>i</code> after the loop:</strong> a counter declared in the header only exists inside the loop.'},
+  {t:'check',items:[
+    ['How many times does <code>for (int i = 0; i &lt; 4; i++)</code> run?','4 times — i takes 0, 1, 2, 3, then stops at 4.'],
+    ['What are the three parts of a for header, in order?','Initialization; condition; update.'],
+    ['How would you count from 5 down to 1?','<code>for (int i = 5; i &gt;= 1; i--)</code>.']]},
+  {t:'try',html:'Read an integer <code>n</code> and use a for loop to print the numbers 1 through <code>n</code>, each on its own line.',meta:'stdin: one integer · checks: prints 1..n'}
+ ]},
+
+{id:"2.10", title:"While Loops", goal:'Repeat code an <b>unknown</b> number of times — as long as a condition stays true.',
+ body:[
+  {t:'p',html:'A <strong>while</strong> loop repeats a block <em>as long as a condition is true</em>. Use it when you do <strong>not</strong> know in advance how many repetitions you need — "keep asking until the guess is right," "keep going until the user types quit." The condition is checked <strong>before</strong> each pass, so if it starts false, the body never runs.'},
+  {t:'code',code:`int count = 0;
+while (count < 3) {
+    System.out.println("Hello!");
+    count++;                    // move toward stopping — or it never ends
+}`,out:`Hello!
+Hello!
+Hello!`},
+  {t:'h',text:'The three things every while loop needs'},
+  {t:'p',html:'A while loop has the same three parts as a for loop, just spread out: you must set up the variable <strong>before</strong> the loop, test it in the <strong>condition</strong>, and change it <strong>inside</strong> the body. Miss the last one and the condition never becomes false.'},
+  {t:'code',code:`int n = 8;
+while (n > 0) {
+    System.out.print(n + " ");
+    n = n - 2;                  // the update that eventually stops it
+}`,out:`8 6 4 2 `},
+  {t:'mistake',title:'The infinite loop',html:'If nothing inside the loop moves the condition toward false, the loop runs forever. The classic cause is forgetting the update — leaving out <code>count++</code> means <code>count</code> stays 0 and <code>count &lt; 3</code> is always true. Whenever you write a while loop, ask: "what line in here will eventually make the condition false?"'},
+  {t:'h',text:'for vs while — which to use'},
+  {t:'note',title:'A simple guide',html:'Use a <strong>for</strong> loop when you know the count ("do this 10 times", "for each position 0 to n"). Use a <strong>while</strong> loop when you loop <em>until something happens</em> and can\'t count the passes ahead of time (user input, a search, a game continuing). Anything a for loop can do, a while loop can too — for is just tidier for counting.'},
+  {t:'p',html:'This is the pattern behind your final-exam guessing game: keep reading guesses <em>while</em> the guess is wrong.'},
+  {t:'check',items:[
+    ['When is a while loop\'s condition checked?','Before every pass, including the very first — so a false condition means zero runs.'],
+    ['What causes an infinite loop?','The condition never becomes false — usually because the loop variable is never updated inside the body.'],
+    ['Would you use for or while to repeat until the user types "quit"?','while — you don\'t know how many times ahead of time.']]},
+  {t:'try',html:'Write a countdown: read an integer <code>n</code> and use a while loop to print <code>n</code> down to 1, one per line.',meta:'stdin: one integer · checks: prints n..1 descending'}
+ ]},
+
+{id:"2.11", title:"If Statements", goal:'Make decisions with <b>if</b>, <b>else if</b>, and <b>else</b>, running different code for different situations.',
+ body:[
+  {t:'p',html:'An <strong>if statement</strong> lets a program choose what to do based on a condition. It is the point where code stops being a fixed recipe and starts reacting — to input, to values, to the state of the game.'},
+  {t:'h',text:'if and else'},
+  {t:'code',code:`int score = 72;
+
+if (score >= 60) {
+    System.out.println("Pass");
+} else {
+    System.out.println("Fail");
+}`,out:`Pass`},
+  {t:'p',html:'The condition inside <code>if (...)</code> must be a <strong>boolean</strong> — something that is true or false. If it\'s true, the first block runs; otherwise the <code>else</code> block runs. The <code>else</code> is optional.'},
+  {t:'h',text:'Choosing among several options: else if'},
+  {t:'p',html:'To pick between more than two outcomes, chain conditions with <code>else if</code>. Java checks them top to bottom and runs the <strong>first</strong> one that\'s true, then skips the rest.'},
+  {t:'code',code:`int grade = 85;
+
+if (grade >= 90) {
+    System.out.println("A");
+} else if (grade >= 80) {
+    System.out.println("B");
+} else if (grade >= 70) {
+    System.out.println("C");
+} else {
+    System.out.println("F");
+}`,out:`B`},
+  {t:'note',title:'Order matters in a chain',html:'Because Java takes the first true branch, order your conditions carefully. If you checked <code>grade &gt;= 70</code> first, an A would wrongly print "C" — it matches that condition before reaching the stricter one.'},
+  {t:'mistake',title:'Common beginner mistakes',html:'<strong>Using <code>=</code> instead of <code>==</code>:</strong> <code>if (x = 5)</code> is a bug — that\'s assignment, not comparison. Use <code>==</code>. <strong>Comparing Strings with <code>==</code>:</strong> use <code>.equals</code> (see 2.8). <strong>A semicolon after the condition:</strong> <code>if (x &gt; 0);</code> ends the if immediately, so the block below always runs — a silent bug. <strong>Forgetting braces</strong> on multi-line blocks: without <code>{ }</code>, only the next single line is part of the if.'},
+  {t:'check',items:[
+    ['What kind of value must go inside <code>if (...)</code>?','A boolean — an expression that is true or false.'],
+    ['In an if/else-if chain, how many branches run?','At most one — the first whose condition is true; the rest are skipped.'],
+    ['Why might checking <code>grade &gt;= 70</code> before <code>grade &gt;= 90</code> give wrong results?','Because the first true branch wins — a 95 would match <code>&gt;= 70</code> first and never reach the A check.']]},
+  {t:'try',html:'Read an integer and print "negative", "zero", or "positive" using an if / else-if / else chain.',meta:'stdin: one integer · checks: correct category'}
+ ]},
+
+{id:"2.12", title:"Loop-and-a-Half", goal:'Handle "read input until a signal" using a loop that must run once before it can decide to stop.',
+ body:[
+  {t:'p',html:'Some loops have an awkward shape: you can\'t check the stopping condition until <em>after</em> you\'ve done part of the work — like reading input. You have to read a value before you can ask "was that the quit signal?" This is the <strong>loop-and-a-half</strong> pattern, and it shows up constantly in input handling and games.'},
+  {t:'h',text:'The problem'},
+  {t:'p',html:'Imagine reading numbers until the user enters <code>-1</code> (a <strong>sentinel</strong> — a special value that means "stop"). A plain while loop is clumsy here because the first read has to happen before the first check.'},
+  {t:'h',text:'Solution: while(true) with break'},
+  {t:'p',html:'A clean approach: loop forever, then <code>break</code> out the moment you detect the stop signal. <code>break</code> immediately exits the nearest loop.'},
+  {t:'code',code:`Scanner input = new Scanner(System.in);
+int sum = 0;
+
+while (true) {
+    System.out.print("Enter a number (-1 to stop): ");
+    int n = input.nextInt();
+    if (n == -1) {
+        break;                 // leave the loop right now
+    }
+    sum += n;                  // only runs for real numbers
+}
+System.out.println("Sum: " + sum);`,out:`Enter a number (-1 to stop): 4
+Enter a number (-1 to stop): 6
+Enter a number (-1 to stop): -1
+Sum: 10`},
+  {t:'p',html:'Read the structure: <strong>read → check for the sentinel → if it\'s the stop signal, break; otherwise, process it.</strong> The <code>break</code> sits in the middle of the loop body — that "half" pass is where the name comes from.'},
+  {t:'note',title:'This is your guessing game',html:'The final-exam guessing game is exactly this shape: <em>loop forever → read a guess → if it\'s correct, break; otherwise tell them higher/lower and loop again.</em> Recognizing the pattern is half the battle.'},
+  {t:'mistake',title:'Common beginner mistakes',html:'<strong>Processing the sentinel:</strong> make sure your <code>break</code> comes <em>before</em> you use the value, or the stop signal (like -1) gets added into your sum. <strong>Forgetting break entirely:</strong> <code>while (true)</code> with no <code>break</code> is an infinite loop. <strong>break vs continue:</strong> <code>break</code> exits the loop; <code>continue</code> skips to the next pass. Beginners sometimes mix them up.'},
+  {t:'check',items:[
+    ['What is a sentinel value?','A special input value that signals "stop" — like -1 or "quit".'],
+    ['What does <code>break</code> do?','Immediately exits the nearest enclosing loop.'],
+    ['Why must the sentinel check come before processing the value?','So the stop signal itself isn\'t treated as real data (e.g. added to a sum).']]},
+  {t:'try',html:'Keep reading integers and adding them to a running total until the user enters 0, then print the total. Use <code>while (true)</code> and <code>break</code>.',meta:'stdin: integers ending with 0 · checks: correct sum'}
+ ]},
+
+{id:"2.13", title:"Short-Circuit Evaluation", goal:'Understand how <b>&&</b> and <b>||</b> stop early, and use it to write safer conditions.',
+ body:[
+  {t:'p',html:'When Java evaluates a combined condition, it is lazy in a useful way: it stops as soon as the answer is certain. This is called <strong>short-circuit evaluation</strong>, and once you know it, you can order conditions to prevent errors.'},
+  {t:'h',text:'How it works'},
+  {t:'p',html:'For <code>&&</code> (AND): if the left side is <strong>false</strong>, the whole thing is already false, so Java doesn\'t even look at the right side. For <code>||</code> (OR): if the left side is <strong>true</strong>, the whole thing is already true, so the right side is skipped.'},
+  {t:'code',code:`int x = 0;
+
+// Left side is false, so the right side (x > 0) is never checked:
+if (x != 0 && (10 / x) > 1) {
+    System.out.println("safe");
+} else {
+    System.out.println("skipped the risky division");
+}`,out:`skipped the risky division`},
+  {t:'h',text:'Why it matters: guarding against errors'},
+  {t:'p',html:'The example above is the key idea. Dividing by zero crashes a program. By checking <code>x != 0</code> <strong>first</strong> and joining with <code>&&</code>, you guarantee the risky <code>10 / x</code> only runs when <code>x</code> is safe — because if <code>x</code> is 0, short-circuiting skips the division entirely. The <strong>order of your conditions</strong> becomes a safety tool.'},
+  {t:'code',code:`String s = "";
+// Check length is > 0 before touching character 0:
+if (s.length() > 0 && s.charAt(0) == 'A') {
+    System.out.println("starts with A");
+} else {
+    System.out.println("empty or doesn't start with A");
+}`,out:`empty or doesn't start with A`},
+  {t:'note',title:'The rule to remember',html:'Put the <strong>cheap or protective check first</strong>, and the risky one second, joined by <code>&&</code>. That way the risky part only runs when it\'s safe. This is one of the most practical habits in all of programming.'},
+  {t:'check',items:[
+    ['In <code>a && b</code>, when is <code>b</code> skipped?','When <code>a</code> is false — the result is already false.'],
+    ['In <code>a || b</code>, when is <code>b</code> skipped?','When <code>a</code> is true — the result is already true.'],
+    ['How does short-circuiting let you avoid dividing by zero?','Check <code>x != 0</code> first with <code>&&</code>; if x is 0 the division on the right is never evaluated.']]},
+  {t:'try',html:'Read an integer <code>d</code>. Print "ok" only if <code>d</code> is not zero AND <code>100 / d</code> is greater than 5 — ordering the conditions so the division is safe.',meta:'stdin: one integer · checks: no crash on 0'}
+ ]},
+
+{id:"2.14", title:"De Morgan's Laws", goal:'Rewrite negated conditions cleanly by distributing a <b>!</b> across <b>&&</b> and <b>||</b>.',
+ body:[
+  {t:'p',html:'Sometimes you write a condition for the opposite case — "if it is <em>not</em> the case that both X and Y." Negating a combined condition can be confusing. <strong>De Morgan\'s Laws</strong> are two simple rules that let you push a <code>!</code> inward and turn a tangled negation into something readable.'},
+  {t:'h',text:'The two laws'},
+  {t:'code',code:`!(a && b)   is the same as   !a || !b
+!(a || b)   is the same as   !a && !b`,out:``},
+  {t:'p',html:'In words: <strong>distribute the NOT to each part, and flip the operator</strong> — AND becomes OR, OR becomes AND. "Not (A and B)" means "not-A or not-B." "Not (A or B)" means "not-A and not-B."'},
+  {t:'h',text:'A concrete example'},
+  {t:'p',html:'Say a form is valid only when the name is filled in AND the age is at least 18. The <em>invalid</em> case is the negation:'},
+  {t:'code',code:`boolean nameFilled = false;
+boolean adult = true;
+
+// "not valid" — two equivalent ways:
+boolean invalidA = !(nameFilled && adult);
+boolean invalidB = !nameFilled || !adult;   // De Morgan's
+
+System.out.println(invalidA);   // true
+System.out.println(invalidB);   // true — same result`,out:`true
+true`},
+  {t:'p',html:'Both say the same thing: the form is invalid if the name is missing <strong>or</strong> the person isn\'t an adult. The second version is often easier to read and reason about.'},
+  {t:'note',title:'Why learn this?',html:'Beyond simplifying code, De Morgan\'s Laws help you avoid a classic bug: incorrectly negating a condition. When you flip a condition, you must flip <em>both</em> the comparisons <em>and</em> the connector. <code>!(x &gt; 0 && x &lt; 10)</code> is <code>x &lt;= 0 || x &gt;= 10</code> — note every piece changed.'},
+  {t:'mistake',title:'Common beginner mistake',html:'<strong>Forgetting to flip the operator:</strong> students often negate each part but leave <code>&&</code> as <code>&&</code>. <code>!(a && b)</code> is <strong>not</strong> <code>!a && !b</code> — the AND must become OR. Change all three things: each condition and the connector.'},
+  {t:'check',items:[
+    ['Rewrite <code>!(a || b)</code> without the outer NOT.','<code>!a && !b</code> — distribute the NOT and turn OR into AND.'],
+    ['What is <code>!(x &gt;= 5 && x &lt;= 10)</code> as a positive condition?','<code>x &lt; 5 || x &gt; 10</code> — flip each comparison and change AND to OR.'],
+    ['When you distribute a NOT across &&, what does && become?','OR (<code>||</code>).']]},
+  {t:'try',html:'A user may enter only if they have a ticket AND are over 12. Read the two facts and print, using De Morgan\'s form (<code>!hasTicket || age &lt;= 12</code>), whether they must be turned away.',meta:'checks: correct rejection logic'}
+ ]},
+
+{id:"2.15", title:"Strings", goal:'Work with text as <b>String</b> values — building them, measuring them, and comparing them correctly.',
+ body:[
+  {t:'p',html:'A <strong>String</strong> is a sequence of characters — a piece of text like <code>"hello"</code> or <code>"Ava123"</code>. You have used Strings since lesson 2.1; now we look at what you can actually <em>do</em> with them. (Unit 3 goes deeper into String methods; this is the foundation.)'},
+  {t:'h',text:'Making and joining Strings'},
+  {t:'p',html:'You create a String with double quotes, and join Strings (or a String and a value) with <code>+</code> — <strong>concatenation</strong>.'},
+  {t:'code',code:`String first = "Ada";
+String last = "Lovelace";
+String full = first + " " + last;
+System.out.println(full);
+System.out.println("Length: " + full.length());`,out:`Ada Lovelace
+Length: 12`},
+  {t:'p',html:'Notice <code>full.length()</code> — a <strong>method</strong> that asks the String how many characters it holds (spaces count). The dot means "ask this String to do something." You will meet many more String methods in Unit 3.'},
+  {t:'h',text:'Reaching a single character'},
+  {t:'p',html:'Characters in a String have <strong>positions</strong>, numbered from <strong>0</strong>. <code>charAt(i)</code> gives the character at position <code>i</code>.'},
+  {t:'code',code:`String word = "Java";
+System.out.println(word.charAt(0));   // J  (position 0, not 1)
+System.out.println(word.charAt(3));   // a`,out:`J
+a`},
+  {t:'note',title:'Counting from zero',html:'This trips up everyone at first: the first character is at position <strong>0</strong>, so in <code>"Java"</code> (length 4) the valid positions are 0, 1, 2, 3. Position 4 does not exist and would cause an error. Zero-based counting returns constantly in Unit 5 with arrays.'},
+  {t:'h',text:'Comparing Strings — the .equals rule again'},
+  {t:'p',html:'Worth repeating because it matters so much: to check whether two Strings hold the same text, use <code>.equals</code>, not <code>==</code>.'},
+  {t:'code',code:`String pw = "secret";
+System.out.println(pw.equals("secret"));         // true
+System.out.println(pw.equalsIgnoreCase("SECRET")); // true`,out:`true
+true`},
+  {t:'note',title:'Strings don\'t change',html:'A String is <strong>immutable</strong> — methods like these never alter the original; they return a new value. <code>pw.toUpperCase()</code> gives back "SECRET" but leaves <code>pw</code> as "secret" unless you store the result. Keep this in mind as you learn more String methods.'},
+  {t:'mistake',title:'Common beginner mistakes',html:'<strong>Comparing with <code>==</code>:</strong> use <code>.equals</code> for text. <strong>Off-by-one on charAt:</strong> the last valid position is <code>length() - 1</code>, not <code>length()</code>. <strong>Expecting a method to modify the String:</strong> Strings are immutable — capture the returned value.'},
+  {t:'check',items:[
+    ['What does <code>"hello".length()</code> return?','5.'],
+    ['What is the position of the first character in a String?','0 — positions are zero-based.'],
+    ['How do you correctly check if String <code>s</code> equals "done"?','<code>s.equals("done")</code>.']]},
+  {t:'try',html:'Read a line of text and print its length and its first character. Then print whether it equals "hello" (case-insensitive).',meta:'stdin: a line of text · checks: length, first char, equality'}
+ ]}
+];
+
+/* Later units, shown in the nav as the next batches to author. */
+const UPCOMING = [
+  ["Unit 3 · Methods", ["3.1 Java Methods","3.2 Methods and Parameters","3.3 Methods and Return Values","3.4 Javadocs and More Methods","3.5 String Methods","3.6 Strings and Characters","3.7 Exceptions","3.8 String Processing"]],
+  ["Unit 4 · Classes & OOP", ["4.1 Intro to Classes and Objects","4.2 Classes vs. Objects","4.3 Using a Class as a Client","4.4 Writing Classes","4.5 Instance Methods","4.6 Getters and Setters","4.7 Class Methods & Variables","4.8 Wrapper Classes","4.9 Method Overloading","4.10 Local Variables and Scope","4.13 Inheritance","4.14 Abstract Classes","4.15 Polymorphism","4.16 Object Superclass","4.17 Interfaces"]],
+  ["Unit 5 · Data Structures", ["5.1 What are Data Structures?","5.2 Intro to Arrays","5.3 Using Arrays","5.4 Enhanced For Loops","5.5 ArrayList Methods","5.6 Arrays vs ArrayLists","5.9 2D Arrays","5.10 Traversing 2D Arrays","5.11 HashMaps","5.12 Binary Search"]]
+];
+
+/* ===================== tiny Java syntax highlighter ===================== */
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function highlight(raw){
+  // work on already-escaped text; protect comments & strings, then color keywords
+  let s = esc(raw);
+  const store=[]; const stash=(cls,txt)=>{store.push(`<span class="${cls}">${txt}</span>`);return `\u0000${store.length-1}\u0000`;};
+  s = s.replace(/\/\/[^\n]*/g, m=>stash('cm',m));
+  s = s.replace(/&quot;(?:[^&]|&(?!quot;))*?&quot;/g, m=>stash('st',m));  // "..." (escaped quotes)
+  s = s.replace(/'(?:\\.|[^'])'/g, m=>stash('st',m));                    // 'x'
+  s = s.replace(/\b(public|private|static|void|class|new|return|if|else|while|for|break|continue|import|true|false|null)\b/g,'<span class="kw">$1</span>');
+  s = s.replace(/\b(int|double|boolean|char|String|Scanner|long|float)\b/g,'<span class="ty">$1</span>');
+  s = s.replace(/\b(\d+\.?\d*)\b/g,'<span class="nm">$1</span>');
+  s = s.replace(/\u0000(\d+)\u0000/g,(_,i)=>store[+i]);
+  return s;
+}
+
+/* ===================== render ===================== */
+let curIdx = 0;
+function block(b){
+  switch(b.t){
+    case 'p': return `<p class="lead">${b.html}</p>`;
+    case 'h': return `<h2 class="sec">${b.text}</h2>`;
+    case 'code': return `<div class="codeblock"><div class="cbh"><span>JAVA</span><span>example</span></div><pre class="code">${highlight(b.code)}</pre>${b.out!==undefined && b.out!=='' ? `<div class="out"><span class="lbl">OUTPUT</span>${esc(b.out)}</div>`:''}</div>`;
+    case 'mistake': return `<div class="callout mistake"><div class="ch">⚠ ${b.title||'Common mistake'}</div><p>${b.html}</p></div>`;
+    case 'tip': return `<div class="callout tip"><div class="ch">✓ ${b.title||'Tip'}</div><p>${b.html}</p></div>`;
+    case 'note': return `<div class="callout note"><div class="ch">◆ ${b.title||'Note'}</div><p>${b.html}</p></div>`;
+    case 'terms': return `<div class="terms"><h4>Key terms</h4><dl>${b.items.map(([t,d])=>`<dt>${t}</dt><dd>${d}</dd>`).join('')}</dl></div>`;
+    case 'check': return `<div class="check"><h4>Check yourself</h4>${b.items.map((it,i)=>`<div class="cq" id="cq${i}"><div class="q">${it[0]} <button class="reveal" onclick="this.closest('.cq').classList.toggle('show')">show answer</button></div><div class="a">${it[1]}</div></div>`).join('')}</div>`;
+    case 'try': return `<div class="tryit"><h4>▶ Try it yourself</h4><p style="margin-bottom:0">${b.html}</p>${b.meta?`<div class="plabel">${b.meta} · runs in the platform's coding exercise + scratchpad</div>`:''}</div>`;
+  }
+  return '';
+}
+function renderLesson(i){
+  curIdx=i; const L=LESSONS[i];
+  const total=LESSONS.length;
+  document.getElementById('prog').textContent=`Unit 2 · lesson ${i+1} of ${total}`;
+  const html = `
+    <div class="lgoalcard">
+      <div class="top"><span>UNIT 2 · BASIC JAVA</span><span><em>${L.id}</em></span></div>
+      <div class="mid"><h1>${L.title}</h1><div class="goal"><strong>Goal:</strong> ${L.goal}</div></div>
+    </div>
+    ${L.body.map(block).join('')}
+    <div class="pager">
+      <button ${i===0?'disabled':''} onclick="renderLesson(${i-1})"><span class="dir">← previous</span>${i>0?LESSONS[i-1].id+' '+LESSONS[i-1].title:''}</button>
+      <button class="nxt" ${i===total-1?'disabled':''} onclick="renderLesson(${i+1})"><span class="dir">next →</span>${i<total-1?LESSONS[i+1].id+' '+LESSONS[i+1].title:''}</button>
+    </div>`;
+  document.getElementById('content').innerHTML=html;
+  buildNav();
+  document.querySelector('.content').scrollTo(0,0);
+  window.scrollTo(0,0);
+}
+function buildNav(){
+  let html = `<div class="unit"><h3>Unit 2 · Basic Java <span>${LESSONS.length}</span></h3>`;
+  LESSONS.forEach((L,i)=>{ html += `<button class="lrow ${i===curIdx?'on':''} ${i<curIdx?'done':''}" onclick="renderLesson(${i})"><span class="num">${L.id}</span><span>${L.title}</span></button>`; });
+  html += `</div>`;
+  UPCOMING.forEach(([title,items])=>{
+    html += `<div class="unit soon"><h3>${title} <span class="s">next</span></h3>`;
+    items.forEach(it=>{ const [num,...rest]=it.split(' '); html += `<button class="lrow locked"><span class="num">${num}</span><span>${rest.join(' ')}</span></button>`; });
+    html += `</div>`;
+  });
+  document.getElementById('nav').innerHTML=html;
+}
+renderLesson(0);
+</script>
+</body>
+</html>

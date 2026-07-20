@@ -5,10 +5,18 @@ import { getSetting } from "@/lib/settings";
 import LessonRenderer from "@/components/LessonRenderer";
 import LessonWorkspace from "@/components/LessonWorkspace";
 import StudentTools from "@/components/student/StudentTools";
+import HighlightOnLoad from "@/components/lesson/HighlightOnLoad";
 import type { Block, Exercise, QuizQuestion } from "@/lib/curriculum/blocks";
 
-export default async function LessonPage({ params }: { params: Promise<{ code: string }> }) {
+export default async function LessonPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ code: string }>;
+  searchParams: Promise<{ highlight?: string }>;
+}) {
   const { code } = await params;
+  const { highlight } = await searchParams;
   const me = await currentUser();
   if (!me) redirect("/join");
   const lesson = await prisma.lesson.findUnique({ where: { code }, include: { chapter: true } });
@@ -76,6 +84,7 @@ export default async function LessonPage({ params }: { params: Promise<{ code: s
         )}
         <LessonRenderer blocks={blocks} />
       </div>
+      {highlight && <HighlightOnLoad text={highlight} />}
 
       <LessonWorkspace
         lessonCode={lesson.code}

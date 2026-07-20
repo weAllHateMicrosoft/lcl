@@ -49,6 +49,20 @@
 :root[data-theme="dark"] .btn.ghost { color: var(--ink); }
 :root[data-theme="dark"] .cellpill.n, :root[data-theme="dark"] .statuschip.draft { background: #2b2f36; }
 :root[data-theme="dark"] .quoteline { background: #3a3320; color: var(--ink); }
+/* remaining light surfaces */
+:root[data-theme="dark"] .tryit, :root[data-theme="dark"] .terms, :root[data-theme="dark"] .check,
+:root[data-theme="dark"] .diff .box, :root[data-theme="dark"] .test, :root[data-theme="dark"] .histpanel,
+:root[data-theme="dark"] .classcard, :root[data-theme="dark"] .padai-msgs { background: var(--card); }
+:root[data-theme="dark"] .diff .box h5 { background: #23262c; }
+:root[data-theme="dark"] .kpi { background: #23262c; } :root[data-theme="dark"] .kpi .n { color: #e7e9ec; }
+:root[data-theme="dark"] .qcard.info, :root[data-theme="dark"] .aigrade, :root[data-theme="dark"] .notice { background: #1e2030; }
+:root[data-theme="dark"] .offline-note { background: #2a2410; }
+:root[data-theme="dark"] .confirmbar { background: #2a1f1c; }
+/* colored tints → darker versions */
+:root[data-theme="dark"] .opt.right, :root[data-theme="dark"] .test.pass, :root[data-theme="dark"] .sebres.pass { background: #16261f; }
+:root[data-theme="dark"] .opt.wrong, :root[data-theme="dark"] .test.fail, :root[data-theme="dark"] .sebres.fail { background: #2a1f1c; }
+:root[data-theme="dark"] .cellpill.m { background: #16261f; } :root[data-theme="dark"] .cellpill.p { background: #2a2410; }
+:root[data-theme="dark"] .opt.sel { background: #2b2f36; }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: var(--sans); background: var(--paper); color: var(--ink); line-height: 1.5; font-size: 15px; }
@@ -374,6 +388,21 @@ td.name { font-weight: 700; }
 .confirmbar { display: flex; align-items: center; gap: 8px; padding: 10px 14px; background: #fbeceb; border-top: 1.5px solid var(--accent-2); font-size: 13px; }
 .quoteline { display: block; background: #fdf2b8; color: var(--ink); border-left: 3px solid var(--warn); padding: 5px 10px; margin: 4px 0; border-radius: 0 6px 6px 0; font-style: italic; }
 .msg.u .quoteline { background: rgba(255,255,255,.9); }
+
+/* message rows with avatars */
+.msgline { display: flex; align-items: flex-end; gap: 8px; max-width: 92%; }
+.msgline.mine { align-self: flex-end; flex-direction: row-reverse; }
+.msgline.theirs { align-self: flex-start; }
+.msgline .msg { max-width: 100%; }
+
+/* lesson passage the teacher jumped to */
+.lesson-highlight { background: #fde68a; color: var(--ink); border-radius: 3px; padding: 1px 2px; box-shadow: 0 0 0 3px #fde68a; animation: hlpulse 1.4s ease 2; }
+@keyframes hlpulse { 0%,100% { background: #fde68a; } 50% { background: #fbbf24; } }
+
+/* avatar cropper */
+.cropview { position: relative; margin: 0 auto; overflow: hidden; border-radius: 12px; background: #000; touch-action: none; cursor: grab; }
+.cropview:active { cursor: grabbing; }
+.cropring { position: absolute; inset: 0; border-radius: 999px; box-shadow: 0 0 0 999px rgba(22,24,28,.55); pointer-events: none; }
 
 /* ─── Inline lesson editor (edit-while-previewing) ─── */
 .edblk { position: relative; border-radius: 8px; }

@@ -3,8 +3,17 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
-type Convo = { userId: string; name: string; role: string; lastBody: string; lastAt: string; unread: number };
+type Convo = { userId: string; name: string; role: string; avatar?: string | null; lastBody: string; lastAt: string; unread: number };
 type Recipient = { id: string; name: string; role: string; sub?: string };
+
+function Avatar({ name, src }: { name: string; src?: string | null }) {
+  return <span className="avatar-sm">{src ? <img src={src} alt="" /> : name.slice(0, 1).toUpperCase()}</span>;
+}
+
+// Pull the quoted lesson passage ("> ...") out of a message body, if any.
+function quoteOf(body: string): string {
+  return body.split("\n").find((l) => l.startsWith("> "))?.slice(2).trim() || "";
+}
 type Msg = { id: string; mine: boolean; body: string; at: string; kind: string; lessonCode?: string | null; edited?: boolean };
 
 // Render "> quoted" lines (a highlighted lesson passage) as a marked block.
@@ -25,6 +34,8 @@ export default function Inbox({ meId }: { meId: string }) {
   const [active, setActive] = useState<string | null>(null);
   const [thread, setThread] = useState<Msg[]>([]);
   const [otherName, setOtherName] = useState("");
+  const [otherAvatar, setOtherAvatar] = useState<string | null>(null);
+  const [meAvatar, setMeAvatar] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
   const [editing, setEditing] = useState<{ id: string; text: string } | null>(null);
   const [confirmDel, setConfirmDel] = useState<string | null>(null);
@@ -42,6 +53,8 @@ export default function Inbox({ meId }: { meId: string }) {
       const d = await fetch(`/api/messages?with=${userId}`).then((r) => r.json());
       setThread(d.messages || []);
       setOtherName(d.other?.name || recipients.find((r) => r.id === userId)?.name || "");
+      setOtherAvatar(d.other?.avatar || null);
+      setMeAvatar(d.meAvatar || null);
       loadSummary(); // refresh unread counts
       router.refresh(); // update the nav badge
     },
@@ -108,6 +121,7 @@ export default function Inbox({ meId }: { meId: string }) {
         {convos.map((c) => (
           <button key={c.userId} className={`convo ${active === c.userId ? "on" : ""}`} onClick={() => openThread(c.userId)}>
             <div className="crow">
+              <Avatar name={c.name} src={c.avatar} />
               <b>{c.name}</b>
               {c.unread > 0 && <span className="ubadge">{c.unread}</span>}
             </div>
@@ -146,23 +160,31 @@ export default function Inbox({ meId }: { meId: string }) {
                     </div>
                   </div>
                 ) : (
-                  <div key={m.id} className={`msg ${m.mine ? "u" : "a"} msgrow`}>
-                    {renderBody(m.body)}
-                    {m.lessonCode && (
-                      <a className="lessonref" href={`/lessons/${m.lessonCode}`} target="_blank" rel="noopener">
-                        ↗ open lesson {m.lessonCode}
-                      </a>
-                    )}
-                    <span className="meta">
-                      {new Date(m.at).toLocaleString()}
-                      {m.edited ? " · edited" : ""}
-                    </span>
-                    {m.mine && !m.id.startsWith("tmp") && (
-                      <span className="msgacts">
-                        <button title="Edit" onClick={() => setEditing({ id: m.id, text: m.body })}>✎</button>
-                        <button title="Delete" onClick={() => setConfirmDel(m.id)}>✕</button>
+                  <div key={m.id} className={`msgline ${m.mine ? "mine" : "theirs"}`}>
+                    <Avatar name={m.mine ? "You" : otherName} src={m.mine ? meAvatar : otherAvatar} />
+                    <div className={`msg ${m.mine ? "u" : "a"} msgrow`}>
+                      {renderBody(m.body)}
+                      {m.lessonCode && (
+                        <a
+                          className="lessonref"
+                          href={`/lessons/${m.lessonCode}${quoteOf(m.body) ? `?highlight=${encodeURIComponent(quoteOf(m.body))}` : ""}`}
+                          target="_blank"
+                          rel="noopener"
+                        >
+                          ↗ open lesson {m.lessonCode}{quoteOf(m.body) ? " (jumps to the highlighted part)" : ""}
+                        </a>
+                      )}
+                      <span className="meta">
+                        {new Date(m.at).toLocaleString()}
+                        {m.edited ? " · edited" : ""}
                       </span>
-                    )}
+                      {m.mine && !m.id.startsWith("tmp") && (
+                        <span className="msgacts">
+                          <button title="Edit" onClick={() => setEditing({ id: m.id, text: m.body })}>✎</button>
+                          <button title="Delete" onClick={() => setConfirmDel(m.id)}>✕</button>
+                        </span>
+                      )}
+                    </div>
                   </div>
                 )
               )}

@@ -22,7 +22,8 @@ export async function GET(req: Request) {
     await prisma.message.updateMany({ where: { toId: me.id, fromId: withId, readAt: null }, data: { readAt: new Date() } });
     const other = await prisma.user.findUnique({ where: { id: withId } });
     return NextResponse.json({
-      other: other ? { id: other.id, name: other.name, role: other.role } : null,
+      meAvatar: me.avatar,
+      other: other ? { id: other.id, name: other.name, role: other.role, avatar: other.avatar } : null,
       messages: thread.map((m) => ({
         id: m.id,
         mine: m.fromId === me.id,
@@ -43,14 +44,14 @@ export async function GET(req: Request) {
     include: { fromUser: true, toUser: true },
   });
   const seen = new Set<string>();
-  const conversations: { userId: string; name: string; role: string; lastBody: string; lastAt: Date; unread: number }[] = [];
+  const conversations: { userId: string; name: string; role: string; avatar: string | null; lastBody: string; lastAt: Date; unread: number }[] = [];
   for (const m of all) {
     const otherU = m.fromId === me.id ? m.toUser : m.fromUser;
     const otherId = m.fromId === me.id ? m.toId : m.fromId;
     if (!otherId || !otherU || seen.has(otherId)) continue;
     seen.add(otherId);
     const unread = all.filter((x) => x.fromId === otherId && x.toId === me.id && !x.readAt).length;
-    conversations.push({ userId: otherId, name: otherU.name, role: otherU.role, lastBody: m.body, lastAt: m.createdAt, unread });
+    conversations.push({ userId: otherId, name: otherU.name, role: otherU.role, avatar: otherU.avatar, lastBody: m.body, lastAt: m.createdAt, unread });
   }
   return NextResponse.json({ conversations, recipients: await allowedRecipients(me) });
 }

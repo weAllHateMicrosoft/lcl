@@ -44,7 +44,11 @@ model Lesson {
   // Pool the practice + summative quizzes draw from: [{ q, opts[], correct, why }]
   quizBank  Json
 
-  // Unpublished working copy: { title, goal, blocks, exercise, quizBank }.
+  // Learning objectives: string[] — concepts to cover / skills to master.
+  // Shown to students, and fed to the AI tutor + question generator as scope.
+  objectives Json?
+
+  // Unpublished working copy: { title, goal, objectives, blocks, exercise, quizBank }.
   // Students always read the live fields above; the editor edits this until
   // the owner hits Publish.
   draft    Json?
@@ -109,6 +113,7 @@ model Message {
   body       String
   lessonCode String? // optional context (message sent from a lesson)
   readAt     DateTime?
+  editedAt   DateTime?
   createdAt  DateTime  @default(now())
 
   @@index([toId, readAt])

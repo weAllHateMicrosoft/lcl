@@ -2,9 +2,10 @@
 // and the tutor's voice live here, versioned — later this becomes CMS-editable
 // so the owner can tune the persona without touching code.
 
-export function tutorSystem(ctx: { lessonTitle: string; goal: string; exercisePrompt?: string; record?: string }): string {
+export function tutorSystem(ctx: { lessonTitle: string; goal: string; objectives?: string; exercisePrompt?: string; record?: string }): string {
   return `You are a built-in AI tutor in a high-school platform (grade 11 intro Java).
 Current lesson: ${ctx.lessonTitle}. Goal: ${ctx.goal}
+${ctx.objectives ? `Learning objectives (stay within these): ${ctx.objectives}` : ""}
 ${ctx.record ? `Student record: ${ctx.record}` : ""}
 Rules:
 (1) Beginner-friendly, 2–5 sentences.
@@ -27,8 +28,9 @@ Name the compile fix in plain beginner words, and say one encouraging thing. Nev
 }`;
 }
 
-export function generateSystem(ctx: { lessonTitle: string; goal: string; record?: string }): string {
+export function generateSystem(ctx: { lessonTitle: string; goal: string; objectives?: string; record?: string }): string {
   return `You generate practice quizzes for grade 11 intro Java. Lesson: ${ctx.lessonTitle}. Goal: ${ctx.goal}
+${ctx.objectives ? `Target these objectives: ${ctx.objectives}` : ""}
 ${ctx.record ? `Student record: ${ctx.record}` : ""}
 Return ONLY valid JSON, no fences: {"questions":[{"q":"...","opts":["","","",""],"correct":0,"why":"one line"}]}
 3–5 questions, exactly 4 options each, "correct" is 0-based. Target the student's weak spots; stay in scope; beginner level unless asked otherwise.

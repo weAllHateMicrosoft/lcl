@@ -27,15 +27,22 @@ export default function FloatingWindow({
   const resize = useRef<{ px: number; py: number; ow: number; oh: number } | null>(null);
 
   function onTitleDown(e: React.PointerEvent) {
+    if (e.button !== 0) return; // primary button only
     // Dragging always pops a docked window into a float at the cursor.
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    e.currentTarget.setPointerCapture(e.pointerId);
     const startX = state.mode === "docked" ? window.innerWidth - state.w - 24 : state.x;
     const startY = state.mode === "docked" ? 80 : state.y;
     drag.current = { px: e.clientX, py: e.clientY, ox: startX, oy: startY };
     if (state.mode === "docked") patch({ mode: "float", x: startX, y: startY });
   }
   function onTitleMove(e: React.PointerEvent) {
+    // e.buttons check is the fix for the "window follows the hovering mouse"
+    // bug: if the button is no longer held (missed pointerup), stop dragging.
     if (!drag.current) return;
+    if (e.buttons !== 1) {
+      drag.current = null;
+      return;
+    }
     patch({
       x: Math.max(0, drag.current.ox + (e.clientX - drag.current.px)),
       y: Math.max(57, drag.current.oy + (e.clientY - drag.current.py)),
@@ -46,14 +53,19 @@ export default function FloatingWindow({
   }
 
   function onResizeDown(e: React.PointerEvent) {
+    if (e.button !== 0) return;
     e.stopPropagation();
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    e.currentTarget.setPointerCapture(e.pointerId);
     resize.current = { px: e.clientX, py: e.clientY, ow: state.w, oh: state.h };
   }
   function onResizeMove(e: React.PointerEvent) {
     if (!resize.current) return;
+    if (e.buttons !== 1) {
+      resize.current = null;
+      return;
+    }
     patch({
-      w: Math.max(320, resize.current.ow + (e.clientX - resize.current.px) * (state.mode === "docked" ? -1 : 1)),
+      w: Math.max(340, resize.current.ow + (e.clientX - resize.current.px) * (state.mode === "docked" ? -1 : 1)),
       h: state.mode === "docked" ? state.h : Math.max(280, resize.current.oh + (e.clientY - resize.current.py)),
     });
   }
@@ -73,6 +85,8 @@ export default function FloatingWindow({
         onPointerDown={onTitleDown}
         onPointerMove={onTitleMove}
         onPointerUp={onTitleUp}
+        onPointerCancel={onTitleUp}
+        onLostPointerCapture={onTitleUp}
       >
         <span className="ttitle">
           {icon} {title}
@@ -97,6 +111,8 @@ export default function FloatingWindow({
         onPointerDown={onResizeDown}
         onPointerMove={onResizeMove}
         onPointerUp={onResizeUp}
+        onPointerCancel={onResizeUp}
+        onLostPointerCapture={onResizeUp}
       />
     </div>
   );

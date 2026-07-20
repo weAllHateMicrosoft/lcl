@@ -23,7 +23,15 @@ export async function GET(req: Request) {
     const other = await prisma.user.findUnique({ where: { id: withId } });
     return NextResponse.json({
       other: other ? { id: other.id, name: other.name, role: other.role } : null,
-      messages: thread.map((m) => ({ id: m.id, mine: m.fromId === me.id, body: m.body, at: m.createdAt, kind: m.kind })),
+      messages: thread.map((m) => ({
+        id: m.id,
+        mine: m.fromId === me.id,
+        body: m.body,
+        at: m.createdAt,
+        kind: m.kind,
+        lessonCode: m.lessonCode,
+        edited: Boolean(m.editedAt),
+      })),
     });
   }
 
@@ -61,4 +69,28 @@ export async function POST(req: Request) {
 
   const msg = await prisma.message.create({ data: { fromId: me.id, toId, body: text, lessonCode: lessonCode || null, kind: "dm" } });
   return NextResponse.json({ ok: true, id: msg.id });
+}
+
+// Edit your own message.
+export async function PATCH(req: Request) {
+  const me = await currentUser();
+  if (!me) return NextResponse.json({ error: "not signed in" }, { status: 401 });
+  const { id, body } = await req.json();
+  const text = stripHtml(body).trim().slice(0, 4000);
+  const msg = await prisma.message.findUnique({ where: { id } });
+  if (!msg || msg.fromId !== me.id) return NextResponse.json({ error: "not yours" }, { status: 403 });
+  if (!text) return NextResponse.json({ error: "empty" }, { status: 400 });
+  await prisma.message.update({ where: { id }, data: { body: text, editedAt: new Date() } });
+  return NextResponse.json({ ok: true });
+}
+
+// Delete your own message.
+export async function DELETE(req: Request) {
+  const me = await currentUser();
+  if (!me) return NextResponse.json({ error: "not signed in" }, { status: 401 });
+  const { id } = await req.json();
+  const msg = await prisma.message.findUnique({ where: { id } });
+  if (!msg || msg.fromId !== me.id) return NextResponse.json({ error: "not yours" }, { status: 403 });
+  await prisma.message.delete({ where: { id } });
+  return NextResponse.json({ ok: true });
 }

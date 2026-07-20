@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 
 type Convo = { userId: string; name: string; role: string; lastBody: string; lastAt: string; unread: number };
 type Recipient = { id: string; name: string; role: string; sub?: string };
-type Msg = { id: string; mine: boolean; body: string; at: string; kind: string };
+type Msg = { id: string; mine: boolean; body: string; at: string; kind: string; lessonCode?: string | null; edited?: boolean };
 
 export default function Inbox({ meId }: { meId: string }) {
   const router = useRouter();
@@ -95,9 +95,43 @@ export default function Inbox({ meId }: { meId: string }) {
             <div className="thead">{otherName}</div>
             <div className="tmsgs" ref={scrollRef}>
               {thread.map((m) => (
-                <div key={m.id} className={`msg ${m.mine ? "u" : "a"}`}>
+                <div key={m.id} className={`msg ${m.mine ? "u" : "a"} msgrow`}>
                   {m.body}
-                  <span className="meta">{new Date(m.at).toLocaleString()}</span>
+                  {m.lessonCode && (
+                    <a className="lessonref" href={`/lessons/${m.lessonCode}`} target="_blank" rel="noopener">
+                      ↗ open lesson {m.lessonCode}
+                    </a>
+                  )}
+                  <span className="meta">
+                    {new Date(m.at).toLocaleString()}
+                    {m.edited ? " · edited" : ""}
+                  </span>
+                  {m.mine && !m.id.startsWith("tmp") && (
+                    <span className="msgacts">
+                      <button
+                        title="Edit"
+                        onClick={async () => {
+                          const nb = prompt("Edit message:", m.body);
+                          if (nb !== null && nb.trim() && nb !== m.body) {
+                            await fetch("/api/messages", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: m.id, body: nb }) });
+                            openThread(active!);
+                          }
+                        }}
+                      >
+                        ✎
+                      </button>
+                      <button
+                        title="Delete"
+                        onClick={async () => {
+                          if (!confirm("Delete this message?")) return;
+                          await fetch("/api/messages", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: m.id }) });
+                          openThread(active!);
+                        }}
+                      >
+                        ✕
+                      </button>
+                    </span>
+                  )}
                 </div>
               ))}
             </div>

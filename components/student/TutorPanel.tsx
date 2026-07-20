@@ -13,7 +13,7 @@ export default function TutorPanel({
 }: {
   lessonCode: string;
   scratchCode: string;
-  seed: { text: string; nonce: number };
+  seed: { text: string; prompt?: string; nonce: number };
 }) {
   const [msgs, setMsgs] = useState<{ role: "u" | "a"; text: string; meta?: string }[]>([]);
   const [input, setInput] = useState("");
@@ -39,7 +39,8 @@ export default function TutorPanel({
   useEffect(() => {
     if (seed.nonce && seed.nonce !== lastSeed.current) {
       lastSeed.current = seed.nonce;
-      ask(`Can you explain this part of the lesson?\n\n"${seed.text}"`);
+      const q = seed.prompt?.trim() || "Can you explain this part of the lesson?";
+      ask(`${q}\n\n"${seed.text}"`);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [seed.nonce]);

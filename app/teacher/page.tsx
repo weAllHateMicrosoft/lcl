@@ -3,6 +3,8 @@ import { prisma } from "@/lib/db";
 import { currentUser } from "@/lib/auth";
 import Forbidden from "@/components/Forbidden";
 import ClassManager from "@/components/teacher/ClassManager";
+import AskTeacherToggle from "@/components/teacher/AskTeacherToggle";
+import { getSetting } from "@/lib/settings";
 
 export default async function TeacherDashboard() {
   const me = await currentUser();
@@ -24,6 +26,7 @@ export default async function TeacherDashboard() {
   ]);
   const studentIds = students.map((s) => s.id);
   const progress = await prisma.progress.findMany({ where: { userId: { in: studentIds } } });
+  const prefs = await getSetting<{ askTeacher?: boolean }>(`prefs:${me.id}`, {});
   // Difficulty signals: how each lesson is landing across the class.
   const agg = await prisma.attempt.groupBy({
     by: ["lessonId"],
@@ -52,6 +55,9 @@ export default async function TeacherDashboard() {
           Who's stuck, who's coasting
         </h1>
         <ClassManager classes={classes.map((c) => ({ id: c.id, name: c.name, joinCode: c.joinCode, students: c.students }))} />
+        <div className="panel" style={{ marginBottom: 22, padding: "14px 18px" }}>
+          <AskTeacherToggle initial={prefs.askTeacher === true} />
+        </div>
         <div className="kpis">
           <div className="kpi">
             <div className="n">

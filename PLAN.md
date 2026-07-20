@@ -52,6 +52,27 @@ than the prototypes is a regression, even if the backend is "more real".
 - [x] **ARCHITECTURE.md** — the code map (edit-one-folder-per-feature); components reorganized
       into student/ teacher/ messaging/ subfolders.
 
+- [x] **Round 3 (2026-07-20):** floating-window drag bug fixed (pointer-buttons check);
+      highlight-to-ask has an optional prompt + opt-in "Ask teacher" (pref per teacher,
+      questions arrive in inbox with a lesson link); scratchpad v2 (code|output side-by-side,
+      stdin behind a toggle, built-in AI strip, ⌘Enter run); clean quiz opens as a full-screen
+      tab (/exam/[code]); lesson objectives (shown to students, scopes the AI, editable,
+      drafted+versioned); message edit/delete.
+
+## NEXT UP: unified question system (designed, not yet built)
+One typed model in `lib/curriculum/questions.ts` replacing the MCQ-only bank:
+`mcq | tf | short (text answer, tolerant match) | code (run + output check) | essay
+(AI-assisted, teacher-confirmed grade) | info (ungraded stimulus: passage/code/image to read,
+groups following questions)`. Subject-agnostic on purpose (works for English/history/math).
+- One `QuestionView` renderer + one `QuestionEditor` per type; `lib/questions.ts` grades
+  everything server-side (code questions run via the runner).
+- Legacy `{q,opts,correct,why}` normalizes to `mcq` — no data migration needed.
+- AI generation emits the same typed JSON (schema in the prompt).
+- **Test builder**: a `Test` entity (name, question list, time limit?, class assignment,
+  open/close window) + full-screen taking flow reusing /exam; results feed the same
+  Attempt/readiness pipeline. SEB (Safe Exam Browser) integration hooks into /exam:
+  generate a .seb config + verify SEB request headers before serving questions.
+
 ## Next (in order — polish backlog)
 2. **Authoring upgrades** — AI-drafts-a-lesson (topic → blocks + exercise + quiz for review),
    Markdown paste-import. Both land inside the existing editor, not as new pages.

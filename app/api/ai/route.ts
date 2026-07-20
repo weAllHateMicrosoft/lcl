@@ -33,6 +33,7 @@ export async function POST(req: Request) {
   const lesson = await prisma.lesson.findUnique({ where: { code: lessonCode } });
   if (!lesson) return NextResponse.json({ error: "lesson not found" }, { status: 404 });
   const exercise = lesson.exercise as unknown as Exercise;
+  const objectives = ((lesson.objectives as unknown as string[]) || []).join("; ") || undefined;
 
   // ─── Tutor ─────────────────────────────────────────────────────────────────
   if (feature === "tutor") {
@@ -40,7 +41,7 @@ export async function POST(req: Request) {
     const r = await complete<never>(
       {
         feature: "tutor",
-        system: tutorSystem({ lessonTitle: lesson.title, goal: lesson.goal, exercisePrompt: exercise?.prompt, record }),
+        system: tutorSystem({ lessonTitle: lesson.title, goal: lesson.goal, objectives, exercisePrompt: exercise?.prompt, record }),
         messages: [{ role: "user", content: `Student question: ${body.message}\n\nTheir current code:\n${body.code || "(none)"}` }],
         // Generous: thinking models (e.g. Gemini flash) spend hidden reasoning
         // tokens inside this budget — a tight cap strangles the visible reply.
@@ -85,7 +86,7 @@ export async function POST(req: Request) {
     const r = await complete<{ questions: QuizQuestion[] }>(
       {
         feature: "generate",
-        system: generateSystem({ lessonTitle: lesson.title, goal: lesson.goal, record }),
+        system: generateSystem({ lessonTitle: lesson.title, goal: lesson.goal, objectives, record }),
         messages: [{ role: "user", content: body.request ? `Student request: ${body.request}` : "Auto-target the student's weak spots." }],
         json: true,
         maxTokens: 8000,

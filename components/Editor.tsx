@@ -13,8 +13,8 @@ import { useEffect, useRef, useState } from "react";
 import type { Block } from "@/lib/curriculum/blocks";
 
 type WBlock = { uid: string; b: Block };
-type Working = { title: string; goal: string; blocks: WBlock[]; exercise: any; quizBank: any[] };
-type Lesson = { id: string; code: string; title: string; goal: string; blocks: Block[]; exercise: any; quizBank: any[]; draft: any; draftAt: string | null };
+type Working = { title: string; goal: string; objectives: string[]; blocks: WBlock[]; exercise: any; quizBank: any[] };
+type Lesson = { id: string; code: string; title: string; goal: string; objectives?: string[]; blocks: Block[]; exercise: any; quizBank: any[]; draft: any; draftAt: string | null };
 type Chapter = { id: string; title: string; order: number; lessons: Lesson[] };
 
 const uid = () => Math.random().toString(36).slice(2, 10);
@@ -69,11 +69,12 @@ export default function Editor() {
     const lesson = tree[s.c]?.lessons[s.l];
     lessonRef.current = lesson ?? null;
     if (!lesson) return setWorking(null);
-    const src = lesson.draft ?? { title: lesson.title, goal: lesson.goal, blocks: lesson.blocks, exercise: lesson.exercise, quizBank: lesson.quizBank };
+    const src = lesson.draft ?? { title: lesson.title, goal: lesson.goal, objectives: lesson.objectives, blocks: lesson.blocks, exercise: lesson.exercise, quizBank: lesson.quizBank };
     setHasDraft(Boolean(lesson.draft));
     setWorking({
       title: src.title ?? "",
       goal: src.goal ?? "",
+      objectives: src.objectives ?? [],
       blocks: (src.blocks ?? []).map((b: Block) => ({ uid: uid(), b })),
       exercise: src.exercise ?? {},
       quizBank: src.quizBank ?? [],
@@ -104,7 +105,7 @@ export default function Editor() {
       if (!w || !lesson) return;
       await api("PUT", {
         id: lesson.id,
-        draft: { title: w.title, goal: w.goal, blocks: w.blocks.map((x) => x.b), exercise: w.exercise, quizBank: w.quizBank },
+        draft: { title: w.title, goal: w.goal, objectives: w.objectives, blocks: w.blocks.map((x) => x.b), exercise: w.exercise, quizBank: w.quizBank },
       });
       setSaveState("draft saved ✓");
     }, 800);
@@ -117,7 +118,7 @@ export default function Editor() {
     if (saveTimer.current) {
       clearTimeout(saveTimer.current);
       const w = workingRef.current!;
-      await api("PUT", { id: lesson.id, draft: { title: w.title, goal: w.goal, blocks: w.blocks.map((x) => x.b), exercise: w.exercise, quizBank: w.quizBank } });
+      await api("PUT", { id: lesson.id, draft: { title: w.title, goal: w.goal, objectives: w.objectives, blocks: w.blocks.map((x) => x.b), exercise: w.exercise, quizBank: w.quizBank } });
     }
     await api("POST", { action: "publish", lessonId: lesson.id });
     await reload(sel);
@@ -278,6 +279,25 @@ export default function Editor() {
             <div className="lesson pv">
               <InlineHtml key={`t-${lesson.id}`} html={working.title} onChange={(h) => mutate((w) => (w.title = h))} className="" tagStyle="title" placeholder="Lesson title…" />
               <InlineHtml key={`g-${lesson.id}`} html={working.goal} onChange={(h) => mutate((w) => (w.goal = h))} className="goalbox" placeholder="Goal — one sentence students see in the green box…" />
+
+              <div className="objectives">
+                <div className="ch">🎯 IN THIS LESSON — objectives (shown to students, scopes the AI)</div>
+                {working.objectives.map((o, i) => (
+                  <div className="itemrow" key={i}>
+                    <input
+                      className="f"
+                      style={{ flex: 1 }}
+                      value={o}
+                      placeholder="e.g. Trace a while loop by hand"
+                      onChange={(e) => mutate((w) => (w.objectives[i] = e.target.value))}
+                    />
+                    <button onClick={() => mutate((w) => w.objectives.splice(i, 1))}>✕</button>
+                  </div>
+                ))}
+                <button className="addbtn" style={{ width: "auto" }} onClick={() => mutate((w) => w.objectives.push(""))}>
+                  + objective
+                </button>
+              </div>
 
               <InsertRow onPick={(make) => insertAt(0, make)} />
               {working.blocks.map((wb, i) => (

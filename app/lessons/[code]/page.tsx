@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { currentUser } from "@/lib/auth";
+import { getSetting } from "@/lib/settings";
 import LessonRenderer from "@/components/LessonRenderer";
 import LessonWorkspace from "@/components/LessonWorkspace";
 import StudentTools from "@/components/student/StudentTools";
@@ -23,6 +24,17 @@ export default async function LessonPage({ params }: { params: Promise<{ code: s
 
   const blocks = lesson.blocks as unknown as Block[];
   const exercise = lesson.exercise as unknown as Exercise;
+  const objectives = (lesson.objectives as unknown as string[]) || [];
+
+  // "Ask teacher" on highlight is opt-in per teacher (their prefs).
+  let askTeacher: { id: string; name: string } | null = null;
+  if (me.classId) {
+    const cls = await prisma.class.findUnique({ where: { id: me.classId }, include: { teacher: true } });
+    if (cls?.teacher) {
+      const prefs = await getSetting<{ askTeacher?: boolean }>(`prefs:${cls.teacher.id}`, {});
+      if (prefs.askTeacher) askTeacher = { id: cls.teacher.id, name: cls.teacher.name };
+    }
+  }
   // Only the small formative subset (with answers) ships to the browser; the
   // full bank — the clean quiz's answer key — stays server-side (/api/quiz).
   const bank = (lesson.quizBank as unknown as QuizQuestion[]) || [];
@@ -52,6 +64,16 @@ export default async function LessonPage({ params }: { params: Promise<{ code: s
           Lesson <span className="tag k">SET CONTENT — NOT AI</span>
         </h2>
         {lesson.goal && <div className="goalbox" dangerouslySetInnerHTML={{ __html: lesson.goal }} />}
+        {objectives.length > 0 && (
+          <div className="objectives">
+            <div className="ch">🎯 IN THIS LESSON</div>
+            <ul>
+              {objectives.map((o, i) => (
+                <li key={i}>{o}</li>
+              ))}
+            </ul>
+          </div>
+        )}
         <LessonRenderer blocks={blocks} />
       </div>
 
@@ -63,7 +85,7 @@ export default async function LessonPage({ params }: { params: Promise<{ code: s
         hasBank={hasBank}
         mastered={status === "MASTERED"}
       />
-      <StudentTools lessonCode={lesson.code} />
+      <StudentTools lessonCode={lesson.code} askTeacher={askTeacher} />
     </>
   );
 }

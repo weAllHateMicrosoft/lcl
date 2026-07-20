@@ -201,9 +201,8 @@ function GradedExercise({ lessonCode, exercise, onGraded }: { lessonCode: string
   );
 }
 
-/* ── Clean quiz (summative) — bottom of the page, the end of the journey.
-     Questions come from the server WITHOUT answers; grading happens on the
-     server; this is the only path that can set MASTERED. ── */
+/* ── Clean quiz (summative) launcher — the exam itself opens as its own
+     full-screen tab (/exam/[code]) so students can focus. ── */
 function CleanQuiz({
   lessonCode,
   lessonTitle,
@@ -213,32 +212,7 @@ function CleanQuiz({
   lessonTitle: string;
   onMastered: () => void;
 }) {
-  const [open, setOpen] = useState(false);
-  const [attempt, setAttempt] = useState(0);
-  const [questions, setQuestions] = useState<{ q: string; opts: string[] }[] | null>(null);
-  const [result, setResult] = useState<null | { passed: boolean; pct: number }>(null);
   const PASS = 0.75;
-
-  async function start() {
-    setResult(null);
-    setAttempt((a) => a + 1);
-    setOpen(true);
-    setQuestions(null);
-    const r = await fetch(`/api/quiz?lessonCode=${encodeURIComponent(lessonCode)}`).then((x) => x.json());
-    setQuestions(r.questions || []);
-  }
-
-  async function remoteGrade(picks: number[]) {
-    const r = await postJSON("/api/quiz", { lessonCode, picks });
-    if (r.error) return null;
-    setResult({ passed: r.passed, pct: Math.round(r.score * 100) });
-    if (r.passed) {
-      onMastered();
-      setTimeout(() => setOpen(false), 2600);
-    }
-    return { results: r.results };
-  }
-
   return (
     <div className="panel" style={{ borderColor: "var(--accent-2)" }}>
       <h2>
@@ -248,40 +222,12 @@ function CleanQuiz({
         Everything above builds readiness. This is the one thing that sets <b>{lessonTitle}</b> to MASTERED: a clean quiz, no
         hints, pass ≥ {PASS * 100}%. Retake any time.
       </p>
-      <button className="btn orange" onClick={start}>
-        🔒 Start clean quiz → MASTERED
-      </button>
-      {open && (
-        <div className="overlay">
-          <div className="sebwin">
-            <div className="sebbar">
-              <span>🔒 LOCKED-DOWN QUIZ · GRADED ON THE SERVER</span>
-              <span>AI: DISABLED · ATTEMPT {attempt}</span>
-            </div>
-            <div className="sebbody">
-              <h2>Clean Quiz — {lessonTitle}</h2>
-              <p className="sub">Summative. Pass ≥ {PASS * 100}% → MASTERED. Practice never sets Mastered — this does.</p>
-              {questions === null ? (
-                <p style={{ color: "var(--muted)" }}>loading questions…</p>
-              ) : (
-                <Quiz key={attempt} questions={questions} locked submitLabel="Submit clean quiz" remoteGrade={remoteGrade} />
-              )}
-              {result && (
-                <div className={`sebres ${result.passed ? "pass" : "fail"}`}>
-                  {result.passed
-                    ? `✓ ${result.pct}% — ${lessonTitle} → MASTERED. Sidebar and teacher dashboard update now.`
-                    : `✗ ${result.pct}% — below ${PASS * 100}%. Logged; topic stays In Progress. Retake anytime.`}
-                </div>
-              )}
-              <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
-                <button className="btn ghost" onClick={() => setOpen(false)}>
-                  Exit
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <div className="runrow">
+        <a className="btn orange" href={`/exam/${lessonCode}`} target="_blank" rel="noopener" style={{ textDecoration: "none" }} onClick={() => setTimeout(onMastered, 500)}>
+          🔒 Open clean quiz (new tab) → MASTERED
+        </a>
+        <span className="runnote">opens full-screen · refresh this page after passing to see MASTERED</span>
+      </div>
     </div>
   );
 }

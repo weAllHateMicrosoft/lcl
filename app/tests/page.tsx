@@ -39,9 +39,13 @@ export default async function TestsPage() {
               </div>
               <span style={{ flex: 1 }} />
               {s ? (
-                <span className="score ok">
-                  submitted{s.status === "graded" ? ` · ${s.finalScore}/${s.maxScore}` : " · awaiting marks"}
-                </span>
+                t.resultsReleased ? (
+                  <Link className="btn" href={`/tests/${t.id}/result`} style={{ textDecoration: "none" }}>
+                    View result{s.status === "graded" ? ` · ${s.finalScore}/${s.maxScore}` : ""} →
+                  </Link>
+                ) : (
+                  <span className="score ok">submitted{s.status === "graded" ? " · marked, awaiting release" : " · awaiting marks"}</span>
+                )
               ) : closed ? (
                 <span className="score bad">closed</span>
               ) : notOpen ? (

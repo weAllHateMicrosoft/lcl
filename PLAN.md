@@ -71,11 +71,26 @@ than the prototypes is a regression, even if the backend is "more real".
 - [x] **WORKING-SOLO.md** — guide for the owner to build alone with free tools (AI Studio loop,
       always `npm run build` before push, Vercel rollback, good first projects).
 
-## NEXT UP (backlog — designed/considered, not built)
-- SEB integration for /exam (owner confirmed students use own machines): generate .seb config +
-  verify SEB headers before serving questions.
-- Feed Test finalScores into a proper gradebook + student "my grades" view.
-- Wire the richer question types into the lesson quizBank editor (currently mcq-only UI there).
+- [x] **Test system polish (2026-07-20):** drag + insert-between questions in builder;
+      results-release control (`Test.resultsReleased`, teacher toggles on grader page);
+      model answers shown while grading; AI-grade for CODE questions too (not just essays),
+      teacher overrides; student result view (`/tests/[id]/result`) with per-Q feedback,
+      gated on release. Confirmed: save-without-publish already worked (DRAFT state).
+
+## BACKLOG — pick one at a time (owner prefers incremental; I over-reach on big-bangs)
+Ordered by my recommendation, but owner chooses:
+1. **Dashboard declutter** — student detail page logs every CODE_RUN; crowded. Group by lesson,
+   collapse runs, add a Tests row. Redesign needed (not a big-bang — do it carefully).
+2. **Quizzes-inside-lessons** — let a lesson embed a Test (replace the legacy quizBank UI with
+   the typed question system). Biggest structural item; unifies the two quiz paths.
+3. **Gradebook** — collect Test finalScores + lesson mastery into one grades view per class,
+   plus student "my grades".
+4. **Account management** — admin adds/edits teachers, everyone edits name + avatar (User.avatar
+   field already exists), admin prompt-persona editor (move `lib/llm/prompts.ts` into DB Settings),
+   AI budget dashboard.
+5. **SEB** — generate .seb config for a test + verify SEB headers before serving /exam.
+6. **Small**: dark mode (owner may DIY per WORKING-SOLO.md), window-squeeze-content,
+   "ask teacher on highlight" is NOT a bug — needs the teacher's toggle ON (Teacher page).
 
 ### earlier design note (superseded — system now built):
 One typed model in `lib/curriculum/questions.ts` replacing the MCQ-only bank:

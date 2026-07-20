@@ -306,6 +306,8 @@ td.name { font-weight: 700; }
 .qedit-head { display: flex; gap: 8px; align-items: flex-start; }
 .qedit-head .pts { font-family: var(--mono); font-size: 10px; color: var(--muted); display: flex; flex-direction: column; align-items: center; gap: 2px; }
 .qedit-head .pts input { width: 52px; text-align: center; }
+.qbuild.dragging { opacity: .4; }
+.qbuild.dragover { box-shadow: 0 -4px 0 var(--accent), 4px 4px 0 rgba(26,28,30,.08); }
 .qbuild-head { display: flex; align-items: center; gap: 6px; margin-bottom: 10px; }
 .qbuild-head .qtype { font-family: var(--mono); font-size: 11px; font-weight: 700; color: var(--violet); }
 .testsettings { display: grid; grid-template-columns: 1fr 130px 1fr; gap: 12px; margin-bottom: 8px; }

@@ -22,6 +22,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const subs = await prisma.testSubmission.findMany({ where: { testId: id }, include: { user: true }, orderBy: { submittedAt: "asc" } });
   return NextResponse.json({
     title: test?.title,
+    resultsReleased: test?.resultsReleased ?? false,
     questions: normalizeQuestions((test?.questions as any[]) || []),
     submissions: subs.map((s) => ({
       id: s.id,
@@ -45,13 +46,17 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const b = await req.json();
 
   if (b.action === "aiSuggest") {
+    // Works for essays (rubric) and code (expected output / behaviour). The
+    // teacher always confirms or overrides — this is only a suggestion.
     const r = await complete<{ score: number; feedback: string }>(
       {
         feature: "grade",
-        system: `You are marking one exam answer. Return ONLY JSON: {"score": <number 0..${b.max}>, "feedback": "one or two sentences"}.
+        system: `You are marking one exam answer. Return ONLY JSON: {"score": <number 0..${b.max}>, "feedback": "one or two sentences of feedback for the student"}.
 Question: ${b.question}
 ${b.rubric ? `Marking guide: ${b.rubric}` : ""}
-Max marks: ${b.max}. Be fair and consistent; the teacher will confirm.`,
+${b.expected ? `Expected output / correct answer: ${b.expected}` : ""}
+${b.isCode ? "This is a coding question — judge whether the logic is correct even if the output isn't a perfect match; note any bug." : ""}
+Max marks: ${b.max}. Be fair and consistent.`,
         messages: [{ role: "user", content: `Student answer:\n${b.answer || "(blank)"}` }],
         json: true,
         maxTokens: 2000,

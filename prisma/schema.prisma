@@ -116,7 +116,8 @@ model Test {
   timeLimit   Int? // minutes, null = untimed
   openAt      DateTime?
   closeAt     DateTime?
-  published   Boolean  @default(false)
+  published   Boolean  @default(false) // students can take it
+  resultsReleased Boolean @default(false) // students can see their marks + feedback
   submissions TestSubmission[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

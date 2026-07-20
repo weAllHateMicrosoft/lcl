@@ -65,6 +65,11 @@ export async function POST(req: Request) {
       await prisma.test.update({ where: { id: b.id }, data: { published: b.published !== false } });
       return NextResponse.json({ ok: true });
     }
+    case "releaseResults": {
+      if (!(await ownsTest(me, b.id))) return NextResponse.json({ error: "not yours" }, { status: 403 });
+      await prisma.test.update({ where: { id: b.id }, data: { resultsReleased: b.released !== false } });
+      return NextResponse.json({ ok: true });
+    }
     case "delete": {
       if (!(await ownsTest(me, b.id))) return NextResponse.json({ error: "not yours" }, { status: 403 });
       await prisma.test.delete({ where: { id: b.id } });

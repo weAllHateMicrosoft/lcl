@@ -15,6 +15,9 @@ export default function TestBuilder({ id }: { id: string }) {
   const [classes, setClasses] = useState<{ id: string; name: string }[]>([]);
   const [saveState, setSaveState] = useState("");
   const [genOpen, setGenOpen] = useState(false);
+  const [dragIdx, setDragIdx] = useState<number | null>(null);
+  const [overIdx, setOverIdx] = useState<number | null>(null);
+  const [armed, setArmed] = useState<number | null>(null);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const state = useRef<any>({});
   state.current = { title, questions, classId, timeLimit, closeAt };
@@ -62,7 +65,22 @@ export default function TestBuilder({ id }: { id: string }) {
 
   const setQ = (i: number, q: Question) => setQuestions((qs) => qs.map((x, j) => (j === i ? q : x)));
   const addQ = (t: QType) => { setQuestions((qs) => [...qs, blankQuestion(t)]); scheduleSave(); };
+  const insertQ = (i: number, t: QType) => { setQuestions((qs) => { const n = [...qs]; n.splice(i, 0, blankQuestion(t)); return n; }); scheduleSave(); };
   const delQ = (i: number) => { setQuestions((qs) => qs.filter((_, j) => j !== i)); scheduleSave(); };
+  function onDrop(to: number) {
+    if (dragIdx !== null && dragIdx !== to) {
+      setQuestions((qs) => {
+        const n = [...qs];
+        const [m] = n.splice(dragIdx, 1);
+        n.splice(to > dragIdx ? to - 1 : to, 0, m);
+        return n;
+      });
+      scheduleSave();
+    }
+    setDragIdx(null);
+    setOverIdx(null);
+    setArmed(null);
+  }
   const move = (i: number, d: -1 | 1) =>
     setQuestions((qs) => {
       const n = [...qs];
@@ -122,16 +140,28 @@ export default function TestBuilder({ id }: { id: string }) {
         <div className="meta">{questions.length} questions · {maxPoints(questions)} points total</div>
       </div>
 
+      <InsertRow onPick={(t) => insertQ(0, t)} />
       {questions.map((q, i) => (
-        <div className="panel qbuild" key={q.id}>
-          <div className="qbuild-head">
-            <span className="qtype">{QUESTION_TYPES.find((t) => t.type === q.type)?.label}</span>
-            <span style={{ flex: 1 }} />
-            <button className="tbtn2" disabled={i === 0} onClick={() => move(i, -1)}>↑</button>
-            <button className="tbtn2" disabled={i === questions.length - 1} onClick={() => move(i, 1)}>↓</button>
-            <button className="tbtn2 danger" onClick={() => delQ(i)}>✕</button>
+        <div key={q.id}>
+          <div
+            className={`panel qbuild ${dragIdx === i ? "dragging" : ""} ${overIdx === i ? "dragover" : ""}`}
+            draggable={armed === i}
+            onDragStart={() => setDragIdx(i)}
+            onDragEnd={() => { setDragIdx(null); setOverIdx(null); setArmed(null); }}
+            onDragOver={(e) => { e.preventDefault(); setOverIdx(i); }}
+            onDrop={() => onDrop(i)}
+          >
+            <div className="qbuild-head">
+              <span className="grip" title="Drag to reorder" onMouseDown={() => setArmed(i)} style={{ cursor: "grab", userSelect: "none", color: "var(--muted)" }}>⠿</span>
+              <span className="qtype">{QUESTION_TYPES.find((t) => t.type === q.type)?.label}</span>
+              <span style={{ flex: 1 }} />
+              <button className="tbtn2" disabled={i === 0} onClick={() => move(i, -1)}>↑</button>
+              <button className="tbtn2" disabled={i === questions.length - 1} onClick={() => move(i, 1)}>↓</button>
+              <button className="tbtn2 danger" onClick={() => delQ(i)}>✕</button>
+            </div>
+            <QuestionEditor q={q} onChange={(nq) => edit(() => setQ(i, nq))} />
           </div>
-          <QuestionEditor q={q} onChange={(nq) => edit(() => setQ(i, nq))} />
+          <InsertRow onPick={(t) => insertQ(i + 1, t)} />
         </div>
       ))}
 
@@ -144,6 +174,27 @@ export default function TestBuilder({ id }: { id: string }) {
       </div>
 
       {genOpen && <AiGen onGo={aiGenerate} onCancel={() => setGenOpen(false)} />}
+    </div>
+  );
+}
+
+// A "+" between questions that opens the type menu right there.
+function InsertRow({ onPick }: { onPick: (t: QType) => void }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className={`insrow ${open ? "open" : ""}`}>
+      <div className="line" />
+      {!open ? (
+        <button className="plus" title="Insert question here" onClick={() => setOpen(true)}>+</button>
+      ) : (
+        <div className="insmenu">
+          {QUESTION_TYPES.map((t) => (
+            <button key={t.type} onClick={() => { onPick(t.type); setOpen(false); }}>{t.label}</button>
+          ))}
+          <button onClick={() => setOpen(false)}>✕</button>
+        </div>
+      )}
+      <div className="line" />
     </div>
   );
 }

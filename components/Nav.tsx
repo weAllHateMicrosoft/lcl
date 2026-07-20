@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 
 type MiniUser = { id: string; name: string; role: string; className?: string | null };
 
-export default function Nav({ me, cost }: { me: MiniUser | null; cost: { total: number; calls: number } | null }) {
+export default function Nav({ me, cost, unread = 0 }: { me: MiniUser | null; cost: { total: number; calls: number } | null; unread?: number }) {
   const path = usePathname();
   const router = useRouter();
   const on = (p: string) => (path === p || path.startsWith(p + "/") ? "on" : "");
@@ -54,6 +54,10 @@ export default function Nav({ me, cost }: { me: MiniUser | null; cost: { total: 
               </>
             )}
           </nav>
+          <Link href="/inbox" className={`tbtn inbox-link ${on("/inbox")}`} style={{ textDecoration: "none", position: "relative" }}>
+            ✉ Messages
+            {unread > 0 && <span className="navbadge">{unread}</span>}
+          </Link>
           {me.role !== "STUDENT" && (
             <Link href="/account" className="tbtn" style={{ textDecoration: "none" }}>
               Account

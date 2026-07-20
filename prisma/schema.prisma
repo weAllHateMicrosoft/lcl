@@ -89,9 +89,30 @@ model User {
   classesOwned Class[]   @relation("ClassTeacher") // staff only
   attempts     Attempt[]
   aiCalls      AiCall[]
+  sent         Message[] @relation("MsgFrom")
+  inbox        Message[] @relation("MsgTo")
   createdAt    DateTime  @default(now())
 
   @@index([classId])
+}
+
+// Direct messages + system notifications share one inbox. kind="dm" is a
+// student↔staff message; kind="system" is a platform notice (fromId null).
+// Extensible: add kinds (e.g. "graded", "announcement") without schema change.
+model Message {
+  id         String    @id @default(cuid())
+  kind       String    @default("dm")
+  fromUser   User?     @relation("MsgFrom", fields: [fromId], references: [id], onDelete: SetNull)
+  fromId     String?
+  toUser     User      @relation("MsgTo", fields: [toId], references: [id], onDelete: Cascade)
+  toId       String
+  body       String
+  lessonCode String? // optional context (message sent from a lesson)
+  readAt     DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([toId, readAt])
+  @@index([fromId])
 }
 
 model Class {

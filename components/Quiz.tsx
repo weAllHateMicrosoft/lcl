@@ -68,7 +68,7 @@ export default function Quiz({
         <div className="qitem" key={i}>
           <div className="qh">
             <span className="n">Q{i + 1}</span>
-            <span dangerouslySetInnerHTML={{ __html: q.q }} />
+            <span style={{ whiteSpace: "pre-wrap" }} dangerouslySetInnerHTML={{ __html: q.q }} />
           </div>
           {q.opts.map((opt, oi) => {
             let cls = "opt";
@@ -81,7 +81,8 @@ export default function Quiz({
             return (
               <button key={oi} className={cls} disabled={submitted} onClick={() => setPicks((p) => ({ ...p, [i]: oi }))}>
                 <span className="letter">{LETTERS[oi]}</span>
-                <span dangerouslySetInnerHTML={{ __html: opt }} />
+                {/* pre-wrap so options containing \n (e.g. expected-output answers) show as real lines */}
+                <span style={{ whiteSpace: "pre-wrap", textAlign: "left" }} dangerouslySetInnerHTML={{ __html: opt }} />
               </button>
             );
           })}

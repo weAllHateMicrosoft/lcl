@@ -40,7 +40,9 @@ a { color: inherit; text-decoration: none; }
 
 /* ─── Shell + sidebar ─── */
 .shell { display: flex; min-height: calc(100vh - 57px); }
-.side { width: 280px; border-right: 1.5px solid var(--line); padding: 22px 16px; background: #f1eee6; flex-shrink: 0; }
+/* Sidebar is its own scroll region — the topic list and the lesson content
+   scroll independently. */
+.side { width: 280px; border-right: 1.5px solid var(--line); padding: 22px 16px; background: #f1eee6; flex-shrink: 0; position: sticky; top: 57px; height: calc(100vh - 57px); overflow-y: auto; }
 .side h3 { font-family: var(--mono); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin: 4px 8px 12px; }
 .topic { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; background: transparent; border: 1.5px solid transparent; border-radius: 10px; padding: 11px 12px; font-size: 14px; font-weight: 600; color: var(--ink); margin-bottom: 4px; }
 .topic:hover { background: #e9e5da; }
@@ -262,18 +264,29 @@ td.name { font-weight: 700; }
 .addbar button:hover { background: var(--ink); color: var(--paper); }
 .pv h1 { font-family: var(--serif); font-weight: 900; font-size: 30px; margin-bottom: 8px; line-height: 1.1; }
 
-/* ─── Side dock (scratchpad + tutor, always reachable) ─── */
+/* ─── Student tool launcher rail ─── */
 .dockrail { position: fixed; right: 0; top: 38%; display: flex; flex-direction: column; gap: 8px; z-index: 40; }
 .dockrail button { writing-mode: vertical-rl; background: var(--ink); color: var(--paper); border: 1.5px solid var(--ink); border-right: none; border-radius: 10px 0 0 10px; padding: 16px 9px; font-size: 12.5px; font-weight: 700; letter-spacing: .04em; box-shadow: -3px 3px 0 rgba(26,28,30,.15); }
-.dockrail button:hover { background: var(--accent); border-color: var(--accent); }
-.dockpanel { position: fixed; right: 0; top: 57px; bottom: 0; width: 480px; max-width: 96vw; background: var(--paper); border-left: 1.5px solid var(--ink); box-shadow: -8px 0 28px rgba(26,28,30,.18); z-index: 45; display: flex; flex-direction: column; }
-.dockpanel.wide { width: min(1050px, 94vw); }
-.dockhead { display: flex; align-items: center; gap: 8px; padding: 9px 12px; border-bottom: 1.5px solid var(--line); background: #f1eee6; }
-.dockhead .dtab { border: 1.5px solid var(--ink); background: #fdfcf9; color: var(--muted); border-radius: 8px; padding: 7px 13px; font-size: 12.5px; font-weight: 700; }
-.dockhead .dtab.on { background: var(--ink); color: var(--paper); }
-.dockhead .dbtn { border: 1px solid var(--line); background: #fff; border-radius: 6px; width: 30px; height: 28px; color: var(--muted); }
-.dockhead .dbtn:hover { border-color: var(--ink); color: var(--ink); }
-.dockbody { flex: 1; overflow-y: auto; padding: 16px; }
+.dockrail button:hover, .dockrail button.on { background: var(--accent); border-color: var(--accent); }
+
+/* ─── Floating / dockable tool windows ─── */
+.toolwin { background: var(--paper); border: 1.5px solid var(--ink); display: flex; flex-direction: column; box-shadow: 4px 6px 0 rgba(26,28,30,.14); overflow: hidden; }
+.toolwin.floating { border-radius: 14px; }
+.toolwin.docked { border-radius: 0; border-right: none; box-shadow: -8px 0 28px rgba(26,28,30,.16); }
+.toolbar { display: flex; align-items: center; gap: 8px; padding: 8px 10px 8px 14px; background: var(--ink); color: var(--paper); cursor: grab; user-select: none; touch-action: none; }
+.toolbar:active { cursor: grabbing; }
+.toolbar .ttitle { font-family: var(--mono); font-size: 11.5px; letter-spacing: .06em; font-weight: 700; }
+.toolbar .tctl { background: transparent; color: #b9bcb2; border: 1px solid #4a4d47; border-radius: 6px; width: 26px; height: 24px; font-size: 12px; }
+.toolbar .tctl:hover { background: #33372f; color: #fff; }
+.toolbody { flex: 1; overflow-y: auto; padding: 16px; min-height: 0; }
+.resizer { position: absolute; }
+.resizer.corner { right: 0; bottom: 0; width: 18px; height: 18px; cursor: nwse-resize; background: linear-gradient(135deg, transparent 50%, var(--muted) 50%, var(--muted) 60%, transparent 60%); }
+.resizer.left { left: 0; top: 0; bottom: 0; width: 7px; cursor: ew-resize; }
+.resizer.left:hover { background: var(--accent); }
+
+/* ─── Highlight-to-ask popup ─── */
+.askpop { position: fixed; transform: translate(-50%, -100%); z-index: 60; background: var(--violet); color: #fff; border: none; border-radius: 8px; padding: 7px 13px; font-size: 12.5px; font-weight: 700; box-shadow: 0 4px 14px rgba(26,28,30,.3); white-space: nowrap; }
+.askpop:hover { filter: brightness(1.08); }
 
 /* ─── Inline lesson editor (edit-while-previewing) ─── */
 .edblk { position: relative; border-radius: 8px; }
@@ -312,6 +325,35 @@ td.name { font-weight: 700; }
 .histpanel .vrow:last-child { border-bottom: none; }
 .draftdot { width: 7px; height: 7px; border-radius: 99px; background: var(--warn); flex-shrink: 0; margin-left: auto; }
 .edh2 { font-family: var(--serif); font-weight: 700; font-size: 21px; margin: 26px 0 10px; padding-bottom: 5px; border-bottom: 2px solid var(--line); }
+
+/* ─── Nav message badge ─── */
+.navbadge { position: absolute; top: -6px; right: -6px; background: var(--accent-2); color: #fff; font-family: var(--mono); font-size: 9px; font-weight: 700; min-width: 16px; height: 16px; border-radius: 99px; display: inline-flex; align-items: center; justify-content: center; padding: 0 4px; }
+
+/* ─── Teacher class cards ─── */
+.classcard { border: 1.5px solid var(--line); border-radius: 12px; padding: 12px 14px; margin-bottom: 12px; background: #fdfcf9; }
+.cchead { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.tbtn2 { border: 1px solid var(--line); background: #fff; border-radius: 7px; min-width: 28px; height: 28px; padding: 0 8px; font-size: 13px; color: var(--muted); display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
+.tbtn2:hover { border-color: var(--ink); color: var(--ink); }
+.tbtn2.danger:hover { border-color: var(--accent-2); color: var(--accent-2); }
+.roster { margin-top: 10px; border-top: 1px dashed var(--line); padding-top: 8px; }
+.rstudent { display: flex; align-items: center; gap: 8px; padding: 5px 0; font-size: 14px; }
+
+/* ─── Inbox ─── */
+.inbox { display: grid; grid-template-columns: 260px 1fr; gap: 0; border: 1.5px solid var(--ink); border-radius: 14px; overflow: hidden; min-height: 460px; box-shadow: 4px 4px 0 rgba(26,28,30,.08); background: #fff; }
+.inbox .convos { border-right: 1.5px solid var(--line); background: #f1eee6; overflow-y: auto; }
+.inbox .newmsg { padding: 10px; border-bottom: 1px solid var(--line); }
+.inbox .newmsg select { width: 100%; padding: 8px; border-radius: 8px; border: 1.5px solid var(--ink); background: #fff; font-family: inherit; font-size: 13px; }
+.inbox .convo { display: block; width: 100%; text-align: left; background: transparent; border: none; border-bottom: 1px solid var(--line); padding: 10px 12px; cursor: pointer; }
+.inbox .convo:hover { background: #e9e5da; }
+.inbox .convo.on { background: #fff; box-shadow: inset 3px 0 0 var(--accent); }
+.inbox .crow { display: flex; align-items: center; gap: 8px; }
+.inbox .ubadge { margin-left: auto; background: var(--accent-2); color: #fff; font-family: var(--mono); font-size: 9px; font-weight: 700; padding: 1px 6px; border-radius: 99px; }
+.inbox .cprev { color: var(--muted); font-size: 12px; margin-top: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.inbox .thread { display: flex; flex-direction: column; }
+.inbox .empty { margin: auto; color: var(--muted); }
+.inbox .thead { padding: 12px 16px; border-bottom: 1.5px solid var(--line); font-family: var(--serif); font-weight: 700; font-size: 16px; }
+.inbox .tmsgs { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 8px; max-height: 420px; }
+.inbox .tmsgs .msg { max-width: 78%; }
 
 /* ─── Auth pages ─── */
 .authwrap { min-height: calc(100vh - 57px); display: flex; align-items: flex-start; justify-content: center; padding: 60px 20px; }

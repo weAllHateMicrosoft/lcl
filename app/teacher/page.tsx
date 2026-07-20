@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { currentUser } from "@/lib/auth";
 import Forbidden from "@/components/Forbidden";
-import ClassManager from "@/components/ClassManager";
+import ClassManager from "@/components/teacher/ClassManager";
 
 export default async function TeacherDashboard() {
   const me = await currentUser();
@@ -12,7 +12,7 @@ export default async function TeacherDashboard() {
   // Teachers see their own classes' students; admin sees everyone.
   const classes = await prisma.class.findMany({
     where: me.role === "ADMIN" ? {} : { teacherId: me.id },
-    include: { _count: { select: { students: true } } },
+    include: { students: { select: { id: true, name: true }, orderBy: { name: "asc" } } },
     orderBy: { createdAt: "asc" },
   });
   const studentFilter =
@@ -51,7 +51,7 @@ export default async function TeacherDashboard() {
         <h1 className="title" style={{ marginBottom: 20 }}>
           Who's stuck, who's coasting
         </h1>
-        <ClassManager classes={classes.map((c) => ({ id: c.id, name: c.name, joinCode: c.joinCode, studentCount: c._count.students }))} />
+        <ClassManager classes={classes.map((c) => ({ id: c.id, name: c.name, joinCode: c.joinCode, students: c.students }))} />
         <div className="kpis">
           <div className="kpi">
             <div className="n">

@@ -27,9 +27,16 @@ export async function recordAttempt(input: {
   const current = await prisma.progress.findUnique({ where: { userId_lessonId: { userId, lessonId } } });
   const prevStatus = current?.status ?? "NOT_STARTED";
 
-  // Readiness = smoothed running signal from all non-summative evidence.
-  const prevReadiness = current?.readiness ?? 0;
-  const readiness = clamp(prevReadiness * 0.7 + score * 0.3);
+  // Readiness = the average of the last 5 attempt scores (including this one).
+  // Legible and reachable: five perfect recent attempts = 100%; a slip shows
+  // immediately. (The old moving average could asymptote but never hit 100.)
+  const recent = await prisma.attempt.findMany({
+    where: { userId, lessonId },
+    orderBy: { createdAt: "desc" },
+    take: 5,
+    select: { score: true },
+  });
+  const readiness = clamp(recent.reduce((s, a) => s + a.score, 0) / Math.max(1, recent.length));
 
   let status = prevStatus;
   if (kind === "QUIZ_SUMMATIVE" && passed) {

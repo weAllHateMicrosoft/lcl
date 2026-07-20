@@ -3,7 +3,7 @@ import { prisma } from "@/lib/db";
 import { currentUser } from "@/lib/auth";
 import LessonRenderer from "@/components/LessonRenderer";
 import LessonWorkspace from "@/components/LessonWorkspace";
-import SideDock from "@/components/SideDock";
+import StudentTools from "@/components/student/StudentTools";
 import type { Block, Exercise, QuizQuestion } from "@/lib/curriculum/blocks";
 
 export default async function LessonPage({ params }: { params: Promise<{ code: string }> }) {
@@ -43,7 +43,7 @@ export default async function LessonPage({ params }: { params: Promise<{ code: s
           <div className="bar" style={{ width: `${readiness}%` }} />
         </div>
         <div className="lbl">
-          readiness {readiness}% — practice, code runs, and generated sets move this bar; only the 🔒 clean quiz sets MASTERED
+          readiness {readiness}% — the average of your last 5 attempts; only the 🔒 clean quiz sets MASTERED
         </div>
       </div>
 
@@ -63,7 +63,7 @@ export default async function LessonPage({ params }: { params: Promise<{ code: s
         hasBank={hasBank}
         mastered={status === "MASTERED"}
       />
-      <SideDock lessonCode={lesson.code} />
+      <StudentTools lessonCode={lesson.code} />
     </>
   );
 }

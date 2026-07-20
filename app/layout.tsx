@@ -2,6 +2,7 @@ import "./globals.css";
 import type { Metadata } from "next";
 import { prisma } from "@/lib/db";
 import { currentUser } from "@/lib/auth";
+import { unreadCount } from "@/lib/messaging";
 import Nav from "@/components/Nav";
 
 export const metadata: Metadata = {
@@ -16,6 +17,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   // Cost badge is staff-only.
   const cost = isStaff ? await prisma.aiCall.aggregate({ _sum: { cost: true }, _count: true }) : null;
   const cls = me?.classId ? await prisma.class.findUnique({ where: { id: me.classId } }) : null;
+  const unread = me ? await unreadCount(me.id) : 0;
 
   return (
     <html lang="en">
@@ -30,6 +32,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <Nav
           me={me ? { id: me.id, name: me.name, role: me.role, className: cls?.name } : null}
           cost={cost ? { total: cost._sum.cost || 0, calls: cost._count } : null}
+          unread={unread}
         />
         {children}
       </body>

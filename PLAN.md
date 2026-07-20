@@ -40,10 +40,19 @@ than the prototypes is a regression, even if the backend is "more real".
       ENCRYPTION_KEY; rate limits (login/join/run/AI) + class-size cap + student daily AI cap;
       security headers.
 
-## Next (in order)
-1. **Deploy** — owner follows DEPLOY.md (rewritten as a first-timer walkthrough with a
-   post-deploy test checklist). Needs their Neon + Vercel accounts; schema flips to
-   `postgresql` in step 3.
+- [x] **DEPLOYED** — live on Vercel + Neon Postgres. Setup verified end-to-end (15 lessons,
+      auth, messaging all confirmed against Neon). `postinstall: prisma generate` for Vercel.
+- [x] **Round 2 UX/features (2026-07-20):** quiz `\n` renders as lines; readiness = avg of last
+      5 attempts (reaches 100%); sidebar scrolls independently; scratchpad + tutor are now
+      independent dock/float windows (`components/student/`, drag title to float, ⇥/⧉/✕
+      controls, resize, persisted); highlight lesson text → "Ask AI" routes to tutor; teacher
+      class powers (rename/delete/regen code/kick+rename students — `components/teacher/`,
+      `/api/classes` action-based w/ ownership); student↔staff messaging + inbox + unread
+      badge (`Message` model, `lib/messaging.ts`, `/api/messages`, `components/messaging/`).
+- [x] **ARCHITECTURE.md** — the code map (edit-one-folder-per-feature); components reorganized
+      into student/ teacher/ messaging/ subfolders.
+
+## Next (in order — polish backlog)
 2. **Authoring upgrades** — AI-drafts-a-lesson (topic → blocks + exercise + quiz for review),
    Markdown paste-import. Both land inside the existing editor, not as new pages.
 3. **Exercises/quizzes for lessons 2.3–2.9, 2.12–2.15** — author via the editor's new exercise/quiz

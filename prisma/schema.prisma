@@ -95,9 +95,52 @@ model User {
   aiCalls      AiCall[]
   sent         Message[] @relation("MsgFrom")
   inbox        Message[] @relation("MsgTo")
+  testsOwned   Test[]    @relation("TestOwner")
+  submissions  TestSubmission[]
+  avatar       String? // small image as a data URL (profile pic)
   createdAt    DateTime  @default(now())
 
   @@index([classId])
+}
+
+// A test/quiz assembled from typed questions (lib/curriculum/questions.ts).
+// Assign to a class; students take it full-screen; results feed grading.
+model Test {
+  id          String   @id @default(cuid())
+  title       String
+  owner       User?    @relation("TestOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  ownerId     String?
+  class       Class?   @relation(fields: [classId], references: [id], onDelete: SetNull)
+  classId     String?
+  questions   Json // Question[]
+  timeLimit   Int? // minutes, null = untimed
+  openAt      DateTime?
+  closeAt     DateTime?
+  published   Boolean  @default(false)
+  submissions TestSubmission[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([classId])
+}
+
+model TestSubmission {
+  id          String   @id @default(cuid())
+  test        Test     @relation(fields: [testId], references: [id], onDelete: Cascade)
+  testId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  answers     Json // { [questionId]: answer }
+  results     Json? // QResult[] after grading
+  autoScore   Float    @default(0)
+  maxScore    Float    @default(0)
+  finalScore  Float? // teacher-confirmed total (overrides auto)
+  status      String   @default("submitted") // submitted | graded
+  submittedAt DateTime @default(now())
+  gradedAt    DateTime?
+
+  @@unique([testId, userId])
+  @@index([testId])
 }
 
 // Direct messages + system notifications share one inbox. kind="dm" is a
@@ -127,6 +170,7 @@ model Class {
   teacher   User?    @relation("ClassTeacher", fields: [teacherId], references: [id], onDelete: SetNull)
   teacherId String?
   students  User[]   @relation("ClassStudents")
+  tests     Test[]
   createdAt DateTime @default(now())
 }
 

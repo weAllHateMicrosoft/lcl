@@ -59,7 +59,25 @@ than the prototypes is a regression, even if the backend is "more real".
       tab (/exam/[code]); lesson objectives (shown to students, scopes the AI, editable,
       drafted+versioned); message edit/delete.
 
-## NEXT UP: unified question system (designed, not yet built)
+- [x] **Unified question + test system (2026-07-20, DONE):** typed questions
+      (`lib/curriculum/questions.ts`: info/mcq/tf/short/long/code — DBQ = info + following Qs);
+      server grader (`lib/grading.ts`, auto for mcq/tf/short/code, long → manual/AI);
+      `Test`+`TestSubmission` models; shared `QuestionView`/`QuestionEditor`; test builder
+      (`/tests/[id]/edit`, class assign, time limit, close time, publish, AI-generate typed
+      questions); full-screen taker (`/exam/test/[id]`, countdown, auto-submit); teacher
+      results+grading (`/teacher/test/[id]`: table, per-question marks, AI-suggest for essays,
+      teacher override, class average). Legacy lesson quizBank auto-normalizes to mcq.
+- [x] Inline message edit + custom delete confirm (no more browser popups).
+- [x] **WORKING-SOLO.md** — guide for the owner to build alone with free tools (AI Studio loop,
+      always `npm run build` before push, Vercel rollback, good first projects).
+
+## NEXT UP (backlog — designed/considered, not built)
+- SEB integration for /exam (owner confirmed students use own machines): generate .seb config +
+  verify SEB headers before serving questions.
+- Feed Test finalScores into a proper gradebook + student "my grades" view.
+- Wire the richer question types into the lesson quizBank editor (currently mcq-only UI there).
+
+### earlier design note (superseded — system now built):
 One typed model in `lib/curriculum/questions.ts` replacing the MCQ-only bank:
 `mcq | tf | short (text answer, tolerant match) | code (run + output check) | essay
 (AI-assisted, teacher-confirmed grade) | info (ungraded stimulus: passage/code/image to read,

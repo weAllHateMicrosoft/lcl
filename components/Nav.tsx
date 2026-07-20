@@ -38,6 +38,9 @@ export default function Nav({ me, cost, unread = 0 }: { me: MiniUser | null; cos
             <Link href="/lessons" className={on("/lessons")}>
               {me.role === "STUDENT" ? "My lessons" : "Student view"}
             </Link>
+            <Link href="/tests" className={on("/tests")}>
+              Tests
+            </Link>
             {(me.role === "TEACHER" || me.role === "ADMIN") && (
               <Link href="/teacher" className={on("/teacher")}>
                 Teacher

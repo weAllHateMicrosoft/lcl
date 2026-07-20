@@ -15,6 +15,8 @@ export default function Inbox({ meId }: { meId: string }) {
   const [thread, setThread] = useState<Msg[]>([]);
   const [otherName, setOtherName] = useState("");
   const [draft, setDraft] = useState("");
+  const [editing, setEditing] = useState<{ id: string; text: string } | null>(null);
+  const [confirmDel, setConfirmDel] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const loadSummary = useCallback(async () => {
@@ -52,6 +54,22 @@ export default function Inbox({ meId }: { meId: string }) {
   useEffect(() => {
     scrollRef.current?.scrollTo(0, scrollRef.current.scrollHeight);
   }, [thread]);
+
+  async function saveEdit() {
+    if (!editing) return;
+    const { id, text } = editing;
+    setEditing(null);
+    if (text.trim()) {
+      await fetch("/api/messages", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, body: text }) });
+      openThread(active!);
+    }
+  }
+
+  async function doDelete(id: string) {
+    setConfirmDel(null);
+    await fetch("/api/messages", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) });
+    openThread(active!);
+  }
 
   async function send() {
     if (!draft.trim() || !active) return;
@@ -94,47 +112,57 @@ export default function Inbox({ meId }: { meId: string }) {
           <>
             <div className="thead">{otherName}</div>
             <div className="tmsgs" ref={scrollRef}>
-              {thread.map((m) => (
-                <div key={m.id} className={`msg ${m.mine ? "u" : "a"} msgrow`}>
-                  {m.body}
-                  {m.lessonCode && (
-                    <a className="lessonref" href={`/lessons/${m.lessonCode}`} target="_blank" rel="noopener">
-                      ↗ open lesson {m.lessonCode}
-                    </a>
-                  )}
-                  <span className="meta">
-                    {new Date(m.at).toLocaleString()}
-                    {m.edited ? " · edited" : ""}
-                  </span>
-                  {m.mine && !m.id.startsWith("tmp") && (
-                    <span className="msgacts">
-                      <button
-                        title="Edit"
-                        onClick={async () => {
-                          const nb = prompt("Edit message:", m.body);
-                          if (nb !== null && nb.trim() && nb !== m.body) {
-                            await fetch("/api/messages", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: m.id, body: nb }) });
-                            openThread(active!);
-                          }
-                        }}
-                      >
-                        ✎
-                      </button>
-                      <button
-                        title="Delete"
-                        onClick={async () => {
-                          if (!confirm("Delete this message?")) return;
-                          await fetch("/api/messages", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: m.id }) });
-                          openThread(active!);
-                        }}
-                      >
-                        ✕
-                      </button>
+              {thread.map((m) =>
+                editing?.id === m.id ? (
+                  <div key={m.id} className={`msg ${m.mine ? "u" : "a"}`} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    <textarea
+                      className="f"
+                      rows={2}
+                      value={editing.text}
+                      autoFocus
+                      onChange={(e) => setEditing({ id: m.id, text: e.target.value })}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !e.shiftKey) {
+                          e.preventDefault();
+                          saveEdit();
+                        }
+                        if (e.key === "Escape") setEditing(null);
+                      }}
+                    />
+                    <div style={{ display: "flex", gap: 6 }}>
+                      <button className="btn green" style={{ padding: "4px 10px", fontSize: 12 }} onClick={saveEdit}>Save</button>
+                      <button className="tbtn2" onClick={() => setEditing(null)}>Cancel</button>
+                    </div>
+                  </div>
+                ) : (
+                  <div key={m.id} className={`msg ${m.mine ? "u" : "a"} msgrow`}>
+                    {m.body}
+                    {m.lessonCode && (
+                      <a className="lessonref" href={`/lessons/${m.lessonCode}`} target="_blank" rel="noopener">
+                        ↗ open lesson {m.lessonCode}
+                      </a>
+                    )}
+                    <span className="meta">
+                      {new Date(m.at).toLocaleString()}
+                      {m.edited ? " · edited" : ""}
                     </span>
-                  )}
-                </div>
-              ))}
+                    {m.mine && !m.id.startsWith("tmp") && (
+                      <span className="msgacts">
+                        <button title="Edit" onClick={() => setEditing({ id: m.id, text: m.body })}>✎</button>
+                        <button title="Delete" onClick={() => setConfirmDel(m.id)}>✕</button>
+                      </span>
+                    )}
+                  </div>
+                )
+              )}
             </div>
+            {confirmDel && (
+              <div className="confirmbar">
+                Delete this message?
+                <button className="btn orange" style={{ padding: "5px 12px", fontSize: 12 }} onClick={() => doDelete(confirmDel)}>Delete</button>
+                <button className="tbtn2" onClick={() => setConfirmDel(null)}>Cancel</button>
+              </div>
+            )}
             <div className="askrow" style={{ padding: 12, borderTop: "1.5px solid var(--line)" }}>
               <input value={draft} onChange={(e) => setDraft(e.target.value)} onKeyDown={(e) => e.key === "Enter" && send()} placeholder="Write a message…" />
               <button className="btn" onClick={send}>Send</button>

@@ -299,6 +299,20 @@ td.name { font-weight: 700; }
 .padai { border-top: 1.5px dashed var(--line); padding-top: 10px; }
 .padai-msgs { max-height: 180px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
 
+/* ─── Questions (view + build) ─── */
+.qcard { border: 1.5px solid var(--line); border-radius: 12px; padding: 16px 18px; margin-bottom: 14px; background: #fff; }
+.qcard.info { background: #eef0f7; border-left: 4px solid var(--violet); }
+.qedit { display: flex; flex-direction: column; gap: 6px; }
+.qedit-head { display: flex; gap: 8px; align-items: flex-start; }
+.qedit-head .pts { font-family: var(--mono); font-size: 10px; color: var(--muted); display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.qedit-head .pts input { width: 52px; text-align: center; }
+.qbuild-head { display: flex; align-items: center; gap: 6px; margin-bottom: 10px; }
+.qbuild-head .qtype { font-family: var(--mono); font-size: 11px; font-weight: 700; color: var(--violet); }
+.testsettings { display: grid; grid-template-columns: 1fr 130px 1fr; gap: 12px; margin-bottom: 8px; }
+.gradeans { background: #f1eee6; border-radius: 8px; padding: 8px 12px; margin: 6px 0; font-size: 14px; }
+.graderow { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+.graderow input[type="number"] { width: 60px; padding: 6px; border: 1.5px solid var(--ink); border-radius: 7px; text-align: center; }
+
 /* ─── Full-screen exam ─── */
 .examwrap { min-height: calc(100vh - 57px); background: var(--paper); }
 .exambody { max-width: 760px; margin: 0 auto; padding: 34px 24px 80px; }
@@ -316,6 +330,7 @@ td.name { font-weight: 700; }
 .msgrow .msgacts button { border: none; background: rgba(255,255,255,.85); border-radius: 5px; width: 22px; height: 20px; font-size: 11px; cursor: pointer; color: var(--ink); }
 .lessonref { display: block; margin-top: 6px; font-family: var(--mono); font-size: 11px; color: var(--accent); text-decoration: underline; }
 .msg.u .lessonref { color: #7fd6b8; }
+.confirmbar { display: flex; align-items: center; gap: 8px; padding: 10px 14px; background: #fbeceb; border-top: 1.5px solid var(--accent-2); font-size: 13px; }
 
 /* ─── Inline lesson editor (edit-while-previewing) ─── */
 .edblk { position: relative; border-radius: 8px; }

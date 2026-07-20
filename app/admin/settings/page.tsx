@@ -9,6 +9,9 @@ export default async function SettingsPage() {
   if (!me) redirect("/login");
   if (me.role !== "ADMIN") return <Forbidden need="Admin" />;
   const cfg = await getLLMConfigForClient();
+  const { getSmtpConfig } = await import("@/lib/email");
+  const smtpCfg = await getSmtpConfig();
+  (cfg as any).smtp = smtpCfg ? { host: smtpCfg.host, port: smtpCfg.port, user: smtpCfg.user } : null;
   return (
     <div className="main">
       <div className="crumb">ADMIN · AI PROVIDER</div>

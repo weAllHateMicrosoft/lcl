@@ -1,18 +1,14 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/db";
 import { currentUser } from "@/lib/auth";
 import ProfileForm from "@/components/account/ProfileForm";
 import PasswordForm from "@/components/PasswordForm";
-import StaffManager from "@/components/admin/StaffManager";
+import TotpSetup from "@/components/account/TotpSetup";
 
 export default async function AccountPage() {
   const me = await currentUser();
   if (!me) redirect("/login");
-  if (!me.passwordHash) redirect("/lessons"); // students have no account to manage
-
-  const staff = me.role === "ADMIN"
-    ? await prisma.user.findMany({ where: { role: { in: ["ADMIN", "TEACHER"] } }, orderBy: [{ role: "asc" }, { name: "asc" }] })
-    : [];
+  if (!me.passwordHash) redirect("/lessons");
 
   return (
     <div className="main" style={{ maxWidth: 720 }}>
@@ -30,7 +26,20 @@ export default async function AccountPage() {
         <PasswordForm />
       </div>
 
-      {me.role === "ADMIN" && <StaffManager staff={staff.map((s) => ({ id: s.id, name: s.name, email: s.email, role: s.role }))} meId={me.id} />}
+      {me.role !== "STUDENT" && (
+        <div className="panel">
+          <h2>Two-factor authentication <span className="tag k">SECURITY</span></h2>
+          <TotpSetup enabled={Boolean(me.totpSecret)} />
+        </div>
+      )}
+
+      {me.role === "ADMIN" && (
+        <div className="panel">
+          <h2>Accounts</h2>
+          <p style={{ fontSize: 14, marginBottom: 10 }}>Manage every user — emails, passwords, locks, 2FA, teachers.</p>
+          <Link className="btn" href="/admin/users" style={{ textDecoration: "none" }}>Open account control →</Link>
+        </div>
+      )}
     </div>
   );
 }

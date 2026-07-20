@@ -183,10 +183,10 @@ async function main() {
   const teacherPw = process.env.TEACHER_PASSWORD || genPw();
 
   await prisma.user.create({
-    data: { name: "Owner", email: "admin@classos.dev", role: "ADMIN", passwordHash: hashPassword(adminPw) },
+    data: { name: "Owner", email: "admin@classos.dev", role: "ADMIN", passwordHash: hashPassword(adminPw), emailVerifiedAt: new Date() },
   });
   const teacher = await prisma.user.create({
-    data: { name: "Ms. Rivera", email: "teacher@classos.dev", role: "TEACHER", passwordHash: hashPassword(teacherPw) },
+    data: { name: "Ms. Rivera", email: "teacher@classos.dev", role: "TEACHER", passwordHash: hashPassword(teacherPw), emailVerifiedAt: new Date() },
   });
 
   const demoClass = await prisma.class.create({

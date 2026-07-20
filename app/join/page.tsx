@@ -15,11 +15,11 @@ export default async function JoinPage() {
           Join your class
         </h1>
         <p style={{ color: "var(--muted)", marginBottom: 14, fontSize: 14 }}>
-          Type the class code from the board and your name. Use the <b>same name every time</b> to keep your progress.
+          First time here: enter your class code, your name, your real email, and choose a password. Already joined? <b>Sign in instead.</b>
         </p>
         <JoinForm />
         <div className="authalt">
-          Teacher or admin? <Link href="/login">Staff sign-in →</Link>
+          Already have an account? <Link href="/login">Sign in →</Link>
         </div>
       </div>
     </div>

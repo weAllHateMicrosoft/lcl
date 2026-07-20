@@ -10,13 +10,13 @@ export default async function LoginPage() {
   return (
     <div className="authwrap">
       <div className="panel authcard">
-        <div className="crumb">STAFF SIGN-IN</div>
+        <div className="crumb">SIGN IN</div>
         <h1 className="title" style={{ fontSize: 28, marginBottom: 14 }}>
           Welcome back
         </h1>
         <LoginForm />
         <div className="authalt">
-          Student? <Link href="/join">Join your class with a code →</Link>
+          New student? <Link href="/join">Join your class with a code →</Link>
         </div>
       </div>
     </div>

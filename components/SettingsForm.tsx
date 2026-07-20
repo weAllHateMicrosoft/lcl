@@ -8,6 +8,7 @@ type ClientCfg = {
   keys: { id: string; provider: string; model: string; label: string; hasKey: boolean }[];
   models: Record<string, string>;
   prompts: Record<string, string>;
+  smtp?: { host: string; port: number; user: string } | null;
 };
 
 const PROVIDERS = [
@@ -32,6 +33,7 @@ export default function SettingsForm({ initial }: { initial: ClientCfg }) {
   const [keys, setKeys] = useState<KeyRow[]>(initial.keys.length ? initial.keys : []);
   const [models, setModels] = useState<Record<string, string>>(initial.models || {});
   const [prompts, setPrompts] = useState<Record<string, string>>(initial.prompts || {});
+  const [smtp, setSmtp] = useState({ host: initial.smtp?.host || "", port: initial.smtp?.port ? String(initial.smtp.port) : "", user: initial.smtp?.user || "", pass: "" });
   const [status, setStatus] = useState("");
 
   const rid = () => Math.random().toString(36).slice(2, 10);
@@ -127,6 +129,38 @@ export default function SettingsForm({ initial }: { initial: ClientCfg }) {
       <div className="notice">
         ⚠ <b>Privacy:</b> most free tiers train on submitted prompts. Fine for lesson content and synthetic practice — weigh it
         before sending real student data.
+      </div>
+
+      {/* ── Email (SMTP) ── */}
+      <h2 style={{ fontFamily: "var(--serif)", fontSize: 18, margin: "22px 0 4px" }}>Email sending (verification codes)</h2>
+      <p style={{ color: "var(--muted)", fontSize: 13.5, marginBottom: 10 }}>
+        Powers signup codes, email verification, and password resets. Easiest free option: your Gmail — go to{" "}
+        <b>myaccount.google.com → Security → 2-Step Verification → App passwords</b>, create one for "Mail", and paste it here.
+        Until this is set up, signups skip email verification.
+      </p>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 90px", gap: 8 }}>
+        <input className="f" value={smtp.host} placeholder="smtp.gmail.com" onChange={(e) => setSmtp({ ...smtp, host: e.target.value })} />
+        <input className="f" value={smtp.port} placeholder="465" onChange={(e) => setSmtp({ ...smtp, port: e.target.value })} />
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 8 }}>
+        <input className="f" value={smtp.user} placeholder="your.address@gmail.com" onChange={(e) => setSmtp({ ...smtp, user: e.target.value })} />
+        <input className="f" type="password" value={smtp.pass} placeholder="16-char app password (blank = keep saved)" onChange={(e) => setSmtp({ ...smtp, pass: e.target.value })} />
+      </div>
+      <div className="runrow" style={{ marginTop: 8 }}>
+        <button
+          className="btn ghost"
+          onClick={async () => {
+            setStatus("saving + sending test…");
+            const r = await fetch("/api/settings", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ smtp: { host: smtp.host || "smtp.gmail.com", port: Number(smtp.port) || 465, user: smtp.user, pass: smtp.pass || undefined, testTo: smtp.user } }),
+            }).then((x) => x.json());
+            setStatus(r.message || (r.ok ? "saved ✓" : "failed"));
+          }}
+        >
+          Save email settings + send test
+        </button>
       </div>
 
       <div className="runrow" style={{ marginTop: 14 }}>

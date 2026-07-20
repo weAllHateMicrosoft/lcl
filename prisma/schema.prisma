@@ -85,8 +85,12 @@ model LessonVersion {
 model User {
   id           String    @id @default(cuid())
   name         String
-  email        String?   @unique // staff only
-  passwordHash String? // scrypt "salt:hash" — staff only
+  email        String?   @unique
+  passwordHash String? // scrypt "salt:hash"
+  emailVerifiedAt DateTime?
+  totpSecret   String? // encrypted TOTP secret (Google Authenticator) — admin/staff 2FA
+  failedLogins Int       @default(0)
+  lockedAt     DateTime? // set after repeated failures; admin can unlock
   role         String    @default("STUDENT")
   class        Class?    @relation("ClassStudents", fields: [classId], references: [id], onDelete: SetNull)
   classId      String? // students only
@@ -97,6 +101,7 @@ model User {
   inbox        Message[] @relation("MsgTo")
   testsOwned   Test[]    @relation("TestOwner")
   submissions  TestSubmission[]
+  boardPosts   BoardPost[]
   avatar       String? // small image as a data URL (profile pic)
   createdAt    DateTime  @default(now())
 
@@ -173,7 +178,38 @@ model Class {
   teacherId String?
   students  User[]   @relation("ClassStudents")
   tests     Test[]
+  boardPosts BoardPost[]
   createdAt DateTime @default(now())
+}
+
+// Short-lived email verification codes. `payload` carries pending signup data
+// (the account is only created once the code checks out).
+model AuthCode {
+  id        String   @id @default(cuid())
+  email     String
+  code      String
+  purpose   String // "join" | "verify" | "reset"
+  payload   Json?
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([email, purpose])
+}
+
+// Padlet-style class board. userId null = the AI participant.
+// reactions: { "👍": [userId, ...], ... }
+model BoardPost {
+  id        String   @id @default(cuid())
+  class     Class    @relation(fields: [classId], references: [id], onDelete: Cascade)
+  classId   String
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String?
+  body      String
+  parentId  String? // one level of replies
+  reactions Json?
+  createdAt DateTime @default(now())
+
+  @@index([classId, createdAt])
 }
 
 // ─── Tracking (the readiness/mastery engine, now durable) ────────────────────

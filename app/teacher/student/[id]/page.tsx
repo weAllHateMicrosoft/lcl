@@ -18,12 +18,22 @@ export default async function StudentDetail({ params }: { params: Promise<{ id: 
   // Teachers can only open students from their own classes.
   if (me.role === "TEACHER" && student.class?.teacherId !== me.id) return <Forbidden need="Teacher" />;
 
-  const [progress, attempts] = await Promise.all([
+  const [progress, attempts, testSubs] = await Promise.all([
     prisma.progress.findMany({ where: { userId: id } }),
-    prisma.attempt.findMany({ where: { userId: id }, orderBy: { createdAt: "desc" }, take: 100, include: { lesson: true } }),
+    prisma.attempt.findMany({ where: { userId: id }, orderBy: { createdAt: "desc" }, take: 200, include: { lesson: true } }),
+    prisma.testSubmission.findMany({ where: { userId: id }, include: { test: true }, orderBy: { submittedAt: "desc" } }),
   ]);
   const lessons = await prisma.lesson.findMany({ orderBy: [{ chapter: { order: "asc" } }, { order: "asc" }] });
   const pByLesson = new Map(progress.map((p) => [p.lessonId, p]));
+
+  // Group attempts by lesson so the page isn't a wall of code-runs.
+  type Att = (typeof attempts)[number];
+  const byLesson = new Map<string, { lesson: Att["lesson"]; items: Att[] }>();
+  for (const a of attempts) {
+    if (!byLesson.has(a.lessonId)) byLesson.set(a.lessonId, { lesson: a.lesson, items: [] });
+    byLesson.get(a.lessonId)!.items.push(a);
+  }
+  const groupsInOrder = lessons.map((l) => byLesson.get(l.id)).filter(Boolean) as { lesson: Att["lesson"]; items: Att[] }[];
 
   const KIND_LABEL: Record<string, string> = {
     QUIZ_PRACTICE: "Practice quiz",
@@ -95,81 +105,95 @@ export default async function StudentDetail({ params }: { params: Promise<{ id: 
           </table>
         </div>
 
-        {/* full timeline, expandable to question level */}
-        <h2 style={{ fontFamily: "var(--serif)", fontSize: 20, margin: "0 0 10px" }}>Every attempt — click one for the evidence</h2>
-        <div className="dashgrid">
-          <table>
-            <tbody>
-              {attempts.map((a) => {
-                const d = a.detail as any;
-                const questions: { q: string; picked?: string; answer?: string; ok?: boolean }[] = d?.questions || [];
-                const missed = questions.filter((q) => !q.ok);
-                return (
-                  <tr key={a.id}>
-                    <td style={{ verticalAlign: "top", whiteSpace: "nowrap", fontFamily: "var(--mono)", fontSize: 11, color: "var(--muted)" }}>
-                      {a.createdAt.toLocaleString()}
-                    </td>
-                    <td style={{ verticalAlign: "top" }}>
-                      <details>
-                        <summary style={{ cursor: "pointer" }}>
-                          <b>{KIND_LABEL[a.kind] ?? a.kind}</b> · {a.lesson.code} {a.lesson.title} ·{" "}
-                          <span className={`score ${a.passed ? "ok" : "bad"}`}>
-                            {Math.round(a.score * 100)}% {a.passed ? "✓" : "✗"}
-                          </span>
-                          {questions.length > 0 && (
-                            <span style={{ color: "var(--muted)", fontSize: 12 }}>
-                              {" "}
-                              — {missed.length ? `${missed.length} missed` : "clean"}
-                            </span>
-                          )}
-                        </summary>
-                        <div style={{ padding: "10px 0 4px" }}>
-                          {/* Attempt detail is student-influenced data — ALWAYS plain text
-                              here, or a student could plant HTML that runs in staff browsers. */}
-                          {questions.map((q, i) => (
-                            <div key={i} className={`test ${q.ok ? "pass" : "fail"}`}>
-                              <span className="mark">{q.ok ? "✓" : "✗"}</span>
-                              <div>
-                                <span>{stripHtml(q.q)}</span>
-                                {!q.ok && (
-                                  <div style={{ marginTop: 4, fontSize: 12 }}>
-                                    picked: <b>{stripHtml(q.picked ?? "—")}</b> · correct: <b>{stripHtml(q.answer ?? "—")}</b>
-                                  </div>
-                                )}
-                              </div>
+        {/* Tests taken */}
+        {testSubs.length > 0 && (
+          <>
+            <h2 style={{ fontFamily: "var(--serif)", fontSize: 20, margin: "0 0 10px" }}>Tests</h2>
+            <div className="dashgrid" style={{ marginBottom: 24 }}>
+              <table>
+                <tbody>
+                  {testSubs.map((s) => (
+                    <tr key={s.id}>
+                      <td className="name">{s.test.title}</td>
+                      <td><span className={`statuschip ${s.status === "graded" ? "live" : "draft"}`}>{s.status === "graded" ? "GRADED" : "NEEDS MARKING"}</span></td>
+                      <td>{s.finalScore ?? s.autoScore}/{s.maxScore}</td>
+                      <td style={{ color: "var(--muted)", fontSize: 12 }}>{s.submittedAt.toLocaleString()}</td>
+                      <td><Link className="btn ghost" style={{ padding: "4px 10px" }} href={`/teacher/test/${s.testId}`}>open</Link></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
+
+        {/* Practice history grouped by lesson (code-runs collapsed so it isn't a wall) */}
+        <h2 style={{ fontFamily: "var(--serif)", fontSize: 20, margin: "0 0 10px" }}>Lesson activity</h2>
+        {groupsInOrder.length === 0 && <p style={{ color: "var(--muted)" }}>Nothing logged yet.</p>}
+        {groupsInOrder.map((g) => {
+          const quizzes = g.items.filter((a) => a.kind !== "CODE_RUN");
+          const runs = g.items.filter((a) => a.kind === "CODE_RUN");
+          const runsPassed = runs.filter((a) => a.passed).length;
+          return (
+            <details className="histpanel" key={g.lesson.id}>
+              <summary style={{ cursor: "pointer", fontWeight: 700 }}>
+                {g.lesson.code} {g.lesson.title}
+                <span style={{ color: "var(--muted)", fontWeight: 400, fontSize: 13 }}>
+                  {"  "}— {quizzes.length} quiz attempt{quizzes.length === 1 ? "" : "s"}, {runs.length} code run{runs.length === 1 ? "" : "s"}
+                  {runs.length > 0 ? ` (${runsPassed} passed)` : ""}
+                </span>
+              </summary>
+              <div style={{ marginTop: 8 }}>
+                {quizzes.map((a) => {
+                  const d = a.detail as any;
+                  const questions: { q: string; picked?: string; answer?: string; ok?: boolean }[] = d?.questions || [];
+                  const missed = questions.filter((q) => !q.ok);
+                  return (
+                    <details key={a.id} style={{ padding: "6px 0", borderTop: "1px dashed var(--line)" }}>
+                      <summary style={{ cursor: "pointer" }}>
+                        <b>{KIND_LABEL[a.kind] ?? a.kind}</b> · <span className={`score ${a.passed ? "ok" : "bad"}`}>{Math.round(a.score * 100)}%</span>
+                        {questions.length > 0 && <span style={{ color: "var(--muted)", fontSize: 12 }}> — {missed.length ? `${missed.length} missed` : "clean"}</span>}
+                        <span style={{ color: "var(--muted)", fontSize: 11, fontFamily: "var(--mono)" }}> · {a.createdAt.toLocaleDateString()}</span>
+                      </summary>
+                      <div style={{ padding: "8px 0 4px" }}>
+                        {questions.map((q, i) => (
+                          <div key={i} className={`test ${q.ok ? "pass" : "fail"}`}>
+                            <span className="mark">{q.ok ? "✓" : "✗"}</span>
+                            <div>
+                              <span>{stripHtml(q.q)}</span>
+                              {!q.ok && <div style={{ marginTop: 4, fontSize: 12 }}>picked: <b>{stripHtml(q.picked ?? "—")}</b> · correct: <b>{stripHtml(q.answer ?? "—")}</b></div>}
                             </div>
-                          ))}
-                          {a.kind === "CODE_RUN" && d?.code && (
-                            <>
-                              <div className="codeblock" style={{ margin: "8px 0" }}>
-                                <pre>{d.code}</pre>
-                                {d.stdout !== undefined && (
-                                  <div className="out">
-                                    <span className="lbl">PRINTED</span>
-                                    {d.stdout || "(nothing)"}
-                                  </div>
-                                )}
-                              </div>
-                              {d.mode && <div className="meta">graded: {d.mode === "ai" ? "AI logic check" : "rule-based output test"}</div>}
-                            </>
-                          )}
-                          {questions.length === 0 && a.kind !== "CODE_RUN" && (
-                            <div className="meta">no per-question detail recorded for this attempt</div>
-                          )}
-                        </div>
-                      </details>
-                    </td>
-                  </tr>
-                );
-              })}
-              {attempts.length === 0 && (
-                <tr>
-                  <td style={{ color: "var(--muted)" }}>Nothing logged yet.</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+                          </div>
+                        ))}
+                      </div>
+                    </details>
+                  );
+                })}
+                {runs.length > 0 && (
+                  <details style={{ padding: "6px 0", borderTop: "1px dashed var(--line)" }}>
+                    <summary style={{ cursor: "pointer" }}>
+                      <b>Coding exercise runs</b> <span style={{ color: "var(--muted)", fontSize: 12 }}>— {runs.length} total, {runsPassed} passed</span>
+                    </summary>
+                    <div style={{ padding: "8px 0 4px" }}>
+                      {runs.slice(0, 12).map((a) => {
+                        const d = a.detail as any;
+                        return (
+                          <div key={a.id} className={`test ${a.passed ? "pass" : "fail"}`}>
+                            <span className="mark">{a.passed ? "✓" : "✗"}</span>
+                            <div style={{ fontSize: 12 }}>
+                              {a.createdAt.toLocaleString()} {d?.mode ? `· ${d.mode === "ai" ? "AI check" : "output test"}` : ""}
+                            </div>
+                          </div>
+                        );
+                      })}
+                      {runs.length > 12 && <div className="meta">+ {runs.length - 12} older runs</div>}
+                    </div>
+                  </details>
+                )}
+              </div>
+            </details>
+          );
+        })}
       </div>
     </div>
   );

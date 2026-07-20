@@ -113,6 +113,8 @@ function Marking({ sub, qById, testId, onBack, onSaved }: { sub: Sub; qById: Map
     if (typeof d.score === "number") {
       setAwarded(r.id, d.score);
       setNote(r.id, `AI: ${d.feedback}`);
+    } else if (d.error) {
+      setNote(r.id, `(${d.error})`);
     }
     setBusyAi(null);
   }

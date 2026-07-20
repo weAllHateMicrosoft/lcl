@@ -333,6 +333,8 @@ td.name { font-weight: 700; }
 .lessonref { display: block; margin-top: 6px; font-family: var(--mono); font-size: 11px; color: var(--accent); text-decoration: underline; }
 .msg.u .lessonref { color: #7fd6b8; }
 .confirmbar { display: flex; align-items: center; gap: 8px; padding: 10px 14px; background: #fbeceb; border-top: 1.5px solid var(--accent-2); font-size: 13px; }
+.quoteline { display: block; background: #fdf2b8; color: var(--ink); border-left: 3px solid var(--warn); padding: 5px 10px; margin: 4px 0; border-radius: 0 6px 6px 0; font-style: italic; }
+.msg.u .quoteline { background: rgba(255,255,255,.9); }
 
 /* ─── Inline lesson editor (edit-while-previewing) ─── */
 .edblk { position: relative; border-radius: 8px; }

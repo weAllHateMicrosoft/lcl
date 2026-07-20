@@ -66,7 +66,8 @@ export default function StudentTools({
 
   async function askTeacherNow() {
     if (!popup || !askTeacher) return;
-    const body = `${prompt.trim() || "Can you help me with this part?"}\n\n— about lesson ${lessonCode}: “${popup.text.slice(0, 300)}”`;
+    // Lines starting with "> " render as a highlighted quote in the inbox (both sides).
+    const body = `${prompt.trim() || "Can you help me with this part?"}\n> ${popup.text.slice(0, 300)}\n(lesson ${lessonCode})`;
     await fetch("/api/messages", {
       method: "POST",
       headers: { "Content-Type": "application/json" },

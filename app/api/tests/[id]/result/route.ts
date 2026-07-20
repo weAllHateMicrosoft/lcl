@@ -20,27 +20,31 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const results = (sub.results as any[]) || [];
   const rById = new Map(results.map((r) => [r.id, r]));
 
-  return NextResponse.json({
-    title: test.title,
-    finalScore: sub.finalScore,
-    maxScore: sub.maxScore,
-    status: sub.status,
-    items: questions
-      .filter((q) => q.type !== "info")
-      .map((q) => {
-        const r = rById.get(q.id);
-        const a = (sub.answers as any)[q.id];
-        return {
-          type: q.type,
-          q: (q as any).q,
-          yourAnswer: q.type === "mcq" ? (q as any).opts?.[Number(a)] ?? "—" : q.type === "tf" ? String(a) : String(a ?? "—"),
-          correctAnswer: modelAnswer(q),
-          awarded: r?.awarded ?? 0,
-          max: r?.max ?? q.points,
-          note: r?.note || "",
-        };
-      }),
-  });
+  const fullyGraded = sub.status === "graded";
+  const items = questions
+    .filter((q) => q.type !== "info")
+    .map((q) => {
+      const r = rById.get(q.id);
+      const a = (sub.answers as any)[q.id];
+      // A manual-graded question (auto===false) is "pending" until the teacher marks the whole test.
+      const pending = r ? r.auto === false && !fullyGraded : false;
+      return {
+        type: q.type,
+        q: (q as any).q,
+        yourAnswer: q.type === "mcq" ? (q as any).opts?.[Number(a)] ?? "—" : q.type === "tf" ? String(a) : String(a ?? "—"),
+        correctAnswer: pending ? "" : modelAnswer(q),
+        awarded: r?.awarded ?? 0,
+        max: r?.max ?? q.points,
+        note: pending ? "" : r?.note || "",
+        pending,
+      };
+    });
+
+  const gradedMax = items.filter((i) => !i.pending).reduce((s, i) => s + i.max, 0);
+  const awarded = items.filter((i) => !i.pending).reduce((s, i) => s + i.awarded, 0);
+  const pendingMax = items.filter((i) => i.pending).reduce((s, i) => s + i.max, 0);
+
+  return NextResponse.json({ title: test.title, awarded, gradedMax, pendingMax, items });
 }
 
 function modelAnswer(q: any): string {

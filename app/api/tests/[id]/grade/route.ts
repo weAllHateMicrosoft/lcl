@@ -51,20 +51,26 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     const r = await complete<{ score: number; feedback: string }>(
       {
         feature: "grade",
-        system: `You are marking one exam answer. Return ONLY JSON: {"score": <number 0..${b.max}>, "feedback": "one or two sentences of feedback for the student"}.
+        system: `You are marking one exam answer. Return ONLY JSON, nothing else: {"score": <number 0..${b.max}>, "feedback": "<max 40 words, plain ASCII quotes>"}.
 Question: ${b.question}
 ${b.rubric ? `Marking guide: ${b.rubric}` : ""}
 ${b.expected ? `Expected output / correct answer: ${b.expected}` : ""}
-${b.isCode ? "This is a coding question — judge whether the logic is correct even if the output isn't a perfect match; note any bug." : ""}
-Max marks: ${b.max}. Be fair and consistent.`,
+${b.isCode ? "This is a coding question — judge whether the logic is correct even if the output isn't a perfect match; note any bug briefly." : ""}
+Max marks: ${b.max}. Be fair and consistent. Keep feedback short so the JSON is complete.`,
         messages: [{ role: "user", content: `Student answer:\n${b.answer || "(blank)"}` }],
         json: true,
-        maxTokens: 2000,
+        // Generous: thinking models spend hidden reasoning tokens in this budget;
+        // too small = truncated JSON = the raw-JSON-in-feedback bug.
+        maxTokens: 6000,
       },
       { userId: me.id }
     );
-    const score = Math.max(0, Math.min(b.max, Number(r.data?.score ?? 0)));
-    return NextResponse.json({ score, feedback: r.data?.feedback || r.text, meta: `${r.provider}/${r.model}` });
+    // If parsing failed, DON'T dump raw JSON into the feedback box.
+    if (!r.data || typeof r.data.score === "undefined") {
+      return NextResponse.json({ error: "The AI reply couldn't be read (it may have been cut off). Try again, or mark it yourself." });
+    }
+    const score = Math.max(0, Math.min(b.max, Number(r.data.score) || 0));
+    return NextResponse.json({ score, feedback: String(r.data.feedback || "").trim(), meta: `${r.provider}/${r.model}` });
   }
 
   // Save marks: b.results is the full QResult[] with teacher-set `awarded`.

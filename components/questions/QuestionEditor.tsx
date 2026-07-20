@@ -4,6 +4,7 @@
 // the lesson quiz bank. Emits the full Question (with answer key).
 
 import type { Question } from "@/lib/curriculum/questions";
+import CodeEditor from "../CodeEditor";
 
 export default function QuestionEditor({ q, onChange }: { q: Question; onChange: (q: Question) => void }) {
   const set = (patch: object) => onChange({ ...q, ...patch } as Question);
@@ -83,11 +84,11 @@ export default function QuestionEditor({ q, onChange }: { q: Question; onChange:
 
       {q.type === "code" && (
         <>
-          <div className="lbl">Starter code (optional)</div>
-          <textarea className="f monoarea" rows={3} value={q.starter || ""} onChange={(e) => set({ starter: e.target.value })} />
-          <div className="lbl">Expected output</div>
-          <textarea className="f" rows={2} value={q.expected || ""} onChange={(e) => set({ expected: e.target.value })} />
-          <div className="lbl">stdin (optional)</div>
+          <div className="lbl">Starter code the student sees</div>
+          <CodeEditor value={q.starter || ""} onChange={(v) => set({ starter: v })} height="150px" />
+          <div className="lbl">Expected output (exact — used to auto-grade)</div>
+          <textarea className="f monoarea" rows={2} value={q.expected || ""} onChange={(e) => set({ expected: e.target.value })} />
+          <div className="lbl">stdin fed to the program (optional)</div>
           <input className="f" value={q.stdin || ""} onChange={(e) => set({ stdin: e.target.value })} />
         </>
       )}

@@ -50,8 +50,8 @@ export default function TestTaker({ id }: { id: string }) {
         <div className={`sebres pass`} style={{ display: "block" }}>
           ✓ Submitted — {test.title}
           <div style={{ marginTop: 8, fontWeight: 400 }}>
-            Auto-graded so far: <b>{done.autoScore}/{done.maxScore}</b>.
-            {done.needsManual ? " Some answers (long/essay) will be marked by your teacher." : " Fully graded."}
+            Your answers are in. Your teacher will mark the test and release results — you'll see your score and feedback then
+            under <b>Tests</b>.
           </div>
           <button className="btn ghost" style={{ marginTop: 12 }} onClick={() => window.close()}>Close tab</button>
         </div>

@@ -7,6 +7,17 @@ type Convo = { userId: string; name: string; role: string; lastBody: string; las
 type Recipient = { id: string; name: string; role: string; sub?: string };
 type Msg = { id: string; mine: boolean; body: string; at: string; kind: string; lessonCode?: string | null; edited?: boolean };
 
+// Render "> quoted" lines (a highlighted lesson passage) as a marked block.
+function renderBody(body: string) {
+  return body.split("\n").map((line, i) =>
+    line.startsWith("> ") ? (
+      <mark key={i} className="quoteline">{line.slice(2)}</mark>
+    ) : (
+      <span key={i}>{line}{i < body.split("\n").length - 1 ? "\n" : ""}</span>
+    )
+  );
+}
+
 export default function Inbox({ meId }: { meId: string }) {
   const router = useRouter();
   const [convos, setConvos] = useState<Convo[]>([]);
@@ -136,7 +147,7 @@ export default function Inbox({ meId }: { meId: string }) {
                   </div>
                 ) : (
                   <div key={m.id} className={`msg ${m.mine ? "u" : "a"} msgrow`}>
-                    {m.body}
+                    {renderBody(m.body)}
                     {m.lessonCode && (
                       <a className="lessonref" href={`/lessons/${m.lessonCode}`} target="_blank" rel="noopener">
                         ↗ open lesson {m.lessonCode}

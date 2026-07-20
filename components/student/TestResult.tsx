@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
-type Item = { type: string; q: string; yourAnswer: string; correctAnswer: string; awarded: number; max: number; note: string };
-type Data = { title: string; finalScore: number | null; maxScore: number; status: string; items: Item[] };
+type Item = { type: string; q: string; yourAnswer: string; correctAnswer: string; awarded: number; max: number; note: string; pending: boolean };
+type Data = { title: string; awarded: number; gradedMax: number; pendingMax: number; items: Item[] };
 
 export default function TestResult({ id }: { id: string }) {
   const [data, setData] = useState<Data | null>(null);
@@ -24,21 +24,36 @@ export default function TestResult({ id }: { id: string }) {
   );
   if (!data) return <p style={{ color: "var(--muted)" }}>loading…</p>;
 
-  const pct = data.maxScore ? Math.round(((data.finalScore ?? 0) / data.maxScore) * 100) : 0;
+  const pct = data.gradedMax ? Math.round((data.awarded / data.gradedMax) * 100) : 0;
 
   return (
     <>
       <div className="crumb"><Link href="/tests" style={{ textDecoration: "underline dotted" }}>TESTS</Link> · YOUR RESULT</div>
       <h1 className="title" style={{ marginBottom: 6 }}>{data.title}</h1>
-      <div className="ready" style={{ maxWidth: 400 }}>
+      <div className="ready" style={{ maxWidth: 420 }}>
         <div className="barwrap"><div className="bar" style={{ width: `${pct}%` }} /></div>
-        <div className="lbl">You scored <b>{data.finalScore ?? "—"}/{data.maxScore}</b> ({pct}%)</div>
+        <div className="lbl">
+          You scored <b>{data.awarded}/{data.gradedMax}</b> ({pct}%) on the graded parts.
+          {data.pendingMax > 0 && <> <b>{data.pendingMax}</b> mark{data.pendingMax === 1 ? "" : "s"} (coding / long-answer) are still being marked by your teacher.</>}
+        </div>
       </div>
 
       {data.items.map((it, i) => {
+        if (it.pending) {
+          return (
+            <div className="qcard" key={i} style={{ borderLeft: "4px solid var(--muted)" }}>
+              <div className="qh" style={{ display: "flex", gap: 8 }}>
+                <span className="n">Q{i + 1}</span>
+                <span style={{ flex: 1 }} dangerouslySetInnerHTML={{ __html: it.q }} />
+                <span style={{ color: "var(--muted)", fontFamily: "var(--mono)", fontSize: 11 }}>awaiting marking</span>
+              </div>
+              <div className="gradeans"><b>Your answer:</b> <span style={{ whiteSpace: "pre-wrap" }}>{it.yourAnswer}</span></div>
+            </div>
+          );
+        }
         const full = it.awarded >= it.max && it.max > 0;
         return (
-          <div className={`qcard`} key={i} style={{ borderLeft: `4px solid ${full ? "var(--ok)" : it.awarded > 0 ? "var(--warn)" : "var(--bad)"}` }}>
+          <div className="qcard" key={i} style={{ borderLeft: `4px solid ${full ? "var(--ok)" : it.awarded > 0 ? "var(--warn)" : "var(--bad)"}` }}>
             <div className="qh" style={{ display: "flex", gap: 8 }}>
               <span className="n">Q{i + 1}</span>
               <span style={{ flex: 1 }} dangerouslySetInnerHTML={{ __html: it.q }} />

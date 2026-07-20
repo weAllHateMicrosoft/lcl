@@ -17,8 +17,47 @@
   --serif: "Fraunces", Georgia, serif;
   --sans: "Public Sans", ui-sans-serif, system-ui, sans-serif;
 }
+/* ─── Dark theme ─── overrides the palette variables (most of the app is
+   variable-driven, so this flips the bulk) plus a few hardcoded surfaces. */
+:root[data-theme="dark"] {
+  --ink: #e7e9ec;      /* text */
+  --paper: #16181c;    /* page bg */
+  --card: #1e2126;     /* panels */
+  --line: #333840;
+  --muted: #9aa0a8;
+  --accent: #3fae86;
+  --accent-2: #e0714f;
+  --violet: #8b8fe0;
+  --ok: #3fae86;
+  --warn: #d6a24a;
+  --bad: #e0714f;
+}
+:root[data-theme="dark"] body { background: var(--paper); }
+:root[data-theme="dark"] .topbar { background: #0f1114; }
+:root[data-theme="dark"] .side, :root[data-theme="dark"] .ednav, :root[data-theme="dark"] th,
+:root[data-theme="dark"] .inbox .convos, :root[data-theme="dark"] .terms .k, :root[data-theme="dark"] .gradeans { background: #23262c; }
+:root[data-theme="dark"] .opt, :root[data-theme="dark"] input.f, :root[data-theme="dark"] select.f, :root[data-theme="dark"] textarea.f,
+:root[data-theme="dark"] .genrow input, :root[data-theme="dark"] .askrow input, :root[data-theme="dark"] .stdinrow input,
+:root[data-theme="dark"] .chip, :root[data-theme="dark"] .qcard, :root[data-theme="dark"] .classcard, :root[data-theme="dark"] .lhead input,
+:root[data-theme="dark"] .goalin, :root[data-theme="dark"] .blk textarea, :root[data-theme="dark"] .blk input.f { background: #23262c; color: var(--ink); }
+:root[data-theme="dark"] .goalbox { background: #1c2a24; }
+:root[data-theme="dark"] .callout.mistake { background: #2a1f1c; } :root[data-theme="dark"] .callout.tip { background: #16261f; } :root[data-theme="dark"] .callout.note { background: #1e2030; }
+:root[data-theme="dark"] .msg.a { background: #22302b; }
+:root[data-theme="dark"] .objectives { background: #1e2030; }
+:root[data-theme="dark"] code, :root[data-theme="dark"] .mono { background: #2b2f36; color: #cdd3da; }
+:root[data-theme="dark"] .topic.on, :root[data-theme="dark"] .lrow.on { background: #2b2f36; }
+:root[data-theme="dark"] .btn.ghost { color: var(--ink); }
+:root[data-theme="dark"] .cellpill.n, :root[data-theme="dark"] .statuschip.draft { background: #2b2f36; }
+:root[data-theme="dark"] .quoteline { background: #3a3320; color: var(--ink); }
+
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: var(--sans); background: var(--paper); color: var(--ink); line-height: 1.5; font-size: 15px; }
+
+/* ─── Avatars ─── */
+.avatar-sm { width: 24px; height: 24px; border-radius: 99px; background: var(--accent); color: #fff; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px; overflow: hidden; flex-shrink: 0; }
+.avatar-sm img { width: 100%; height: 100%; object-fit: cover; }
+.avatar-lg { width: 96px; height: 96px; border-radius: 99px; background: var(--accent); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 38px; overflow: hidden; border: 2px solid var(--line); }
+.avatar-lg img { width: 100%; height: 100%; object-fit: cover; }
 button { font-family: inherit; cursor: pointer; }
 a { color: inherit; text-decoration: none; }
 

@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import ThemeToggle from "./ThemeToggle";
 
-type MiniUser = { id: string; name: string; role: string; className?: string | null };
+type MiniUser = { id: string; name: string; role: string; className?: string | null; avatar?: string | null };
 
 export default function Nav({ me, cost, unread = 0 }: { me: MiniUser | null; cost: { total: number; calls: number } | null; unread?: number }) {
   const path = usePathname();
@@ -31,7 +32,7 @@ export default function Nav({ me, cost, unread = 0 }: { me: MiniUser | null; cos
             </div>
           )}
           <div className="modelbox" title={me.className ? `Class: ${me.className}` : undefined}>
-            {me.role}
+            <span className="avatar-sm">{me.avatar ? <img src={me.avatar} alt="" /> : me.name.slice(0, 1).toUpperCase()}</span>
             <span style={{ color: "#e9e4d8", fontFamily: "var(--sans)", fontWeight: 600, fontSize: 13 }}>{me.name}</span>
           </div>
           <nav className="viewswitch">
@@ -40,6 +41,9 @@ export default function Nav({ me, cost, unread = 0 }: { me: MiniUser | null; cos
             </Link>
             <Link href="/tests" className={on("/tests")}>
               Tests
+            </Link>
+            <Link href="/gradebook" className={on("/gradebook")}>
+              Grades
             </Link>
             {(me.role === "TEACHER" || me.role === "ADMIN") && (
               <Link href="/teacher" className={on("/teacher")}>
@@ -66,12 +70,14 @@ export default function Nav({ me, cost, unread = 0 }: { me: MiniUser | null; cos
               Account
             </Link>
           )}
+          <ThemeToggle />
           <button className="tbtn" onClick={logout}>
             Sign out
           </button>
         </>
       ) : (
         <nav className="viewswitch">
+          <ThemeToggle />
           <Link href="/join" className={on("/join")}>
             Join class
           </Link>

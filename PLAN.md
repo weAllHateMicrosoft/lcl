@@ -79,9 +79,19 @@ than the prototypes is a regression, even if the backend is "more real".
 
 ## BACKLOG — pick one at a time (owner prefers incremental; I over-reach on big-bangs)
 Ordered by my recommendation, but owner chooses:
-1. **Dashboard declutter** — student detail page logs every CODE_RUN; crowded. Group by lesson,
-   collapse runs, add a Tests row. Redesign needed (not a big-bang — do it carefully).
-2. **Quizzes-inside-lessons** — let a lesson embed a Test (replace the legacy quizBank UI with
+- [x] **Dashboard declutter (done)** — student detail page now groups activity by lesson,
+      collapses code-runs behind a count, and has a Tests section. Also fixed 4 test bugs:
+      AI-grade JSON truncation, pre-release grade hiding (+ name the ungraded remainder),
+      AI-gen coding questions + real code editor for starter, quoted-passage highlight in DMs.
+- [x] **Gradebook (done)** — `/gradebook` role-aware: teacher gets a class grid (students ×
+      tests + mastered count); student sees their released test scores + mastered lessons.
+- [x] **Account management (done)** — `/account`: edit name + avatar (128px data URL, `User.avatar`);
+      admin `StaffManager` adds/removes teachers, resets passwords. `/api/account`, `/api/admin/users`.
+- [x] **Dark mode (done)** — `ThemeToggle` in nav, `data-theme` on <html> + no-flash inline script;
+      dark palette overrides in globals.css. May need contrast tweaks by eye (owner can iterate).
+      STILL DEFERRED (own turns): prompt-persona editor + AI budget dashboard (part of #4 originally).
+
+1. **Quizzes-inside-lessons** — let a lesson embed a Test (replace the legacy quizBank UI with
    the typed question system). Biggest structural item; unifies the two quiz paths.
 3. **Gradebook** — collect Test finalScores + lesson mastery into one grades view per class,
    plus student "my grades".

@@ -4,8 +4,8 @@ import { callProvider, OPENAI_COMPAT_BASE } from "@/lib/llm/providers";
 import { getProviderConfig } from "@/lib/settings";
 import type { Provider } from "@/lib/llm/types";
 
-// One-token ping to confirm a key + model work before students hit them.
-// If apiKey is blank, tests the currently-saved key.
+// One-token ping to confirm a key + model work. Test a NEW key (provider+apiKey
+// +model) or an already-saved one by id.
 export async function POST(req: Request) {
   const gate = await requireRoleApi("ADMIN");
   if (gate instanceof NextResponse) return gate;
@@ -15,14 +15,16 @@ export async function POST(req: Request) {
   let apiKey = body.apiKey as string;
   let model = body.model as string;
 
-  if (!apiKey) {
-    const saved = await getProviderConfig();
-    provider = saved.provider;
-    apiKey = saved.apiKey;
-    model = model || saved.model;
+  if (!apiKey && body.id) {
+    const saved = (await getProviderConfig()).keys.find((k) => k.id === body.id);
+    if (saved) {
+      provider = saved.provider;
+      apiKey = saved.apiKey;
+      model = model || saved.model;
+    }
   }
-
-  if (provider === "stub") return NextResponse.json({ ok: true, message: "Offline stub — no key needed." });
+  if (!provider || provider === "stub") return NextResponse.json({ ok: true, message: "Offline stub — no key needed." });
+  if (!apiKey) return NextResponse.json({ ok: false, message: "No key to test." });
 
   try {
     const raw = await callProvider(

@@ -55,6 +55,9 @@ export default function Nav({ me, cost, unread = 0 }: { me: MiniUser | null; cos
                 <Link href="/admin/editor" className={on("/admin/editor")}>
                   Editor
                 </Link>
+                <Link href="/admin/usage" className={on("/admin/usage")}>
+                  Usage
+                </Link>
                 <Link href="/admin/settings" className={on("/admin/settings")}>
                   Settings
                 </Link>

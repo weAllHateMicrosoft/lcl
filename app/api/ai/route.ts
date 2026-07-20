@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { currentUser } from "@/lib/auth";
 import { complete } from "@/lib/llm";
-import { tutorSystem, gradeSystem, generateSystem } from "@/lib/llm/prompts";
+import { DEFAULT_PROMPTS, renderPrompt } from "@/lib/llm/prompts";
+import { getProviderConfig } from "@/lib/settings";
 import { performanceSummary } from "@/lib/progress";
 import { normalize } from "@/lib/text";
 import { sanitizeInline } from "@/lib/sanitize";
@@ -33,7 +34,8 @@ export async function POST(req: Request) {
   const lesson = await prisma.lesson.findUnique({ where: { code: lessonCode } });
   if (!lesson) return NextResponse.json({ error: "lesson not found" }, { status: 404 });
   const exercise = lesson.exercise as unknown as Exercise;
-  const objectives = ((lesson.objectives as unknown as string[]) || []).join("; ") || undefined;
+  const objectives = ((lesson.objectives as unknown as string[]) || []).join("; ") || "";
+  const prompts = (await getProviderConfig()).prompts; // admin overrides (or {})
 
   // ─── Tutor ─────────────────────────────────────────────────────────────────
   if (feature === "tutor") {
@@ -41,7 +43,13 @@ export async function POST(req: Request) {
     const r = await complete<never>(
       {
         feature: "tutor",
-        system: tutorSystem({ lessonTitle: lesson.title, goal: lesson.goal, objectives, exercisePrompt: exercise?.prompt, record }),
+        system: renderPrompt(prompts.tutor || DEFAULT_PROMPTS.tutor, {
+          lessonTitle: lesson.title,
+          goal: lesson.goal,
+          objectives: objectives ? `Learning objectives (stay within these): ${objectives}` : "",
+          record: record ? `Student record: ${record}` : "",
+          exercise: exercise?.prompt ? `Current exercise: ${exercise.prompt}` : "",
+        }),
         messages: [{ role: "user", content: `Student question: ${body.message}\n\nTheir current code:\n${body.code || "(none)"}` }],
         // Generous: thinking models (e.g. Gemini flash) spend hidden reasoning
         // tokens inside this budget — a tight cap strangles the visible reply.
@@ -70,7 +78,14 @@ export async function POST(req: Request) {
     const r = await complete<{ feedback: string }>(
       {
         feature: "grade",
-        system: gradeSystem({ prompt: exercise?.prompt || "", behaviour: exercise?.behaviour || "", compileError: body.compiled === false ? body.error : undefined }),
+        system: renderPrompt(prompts.grade || DEFAULT_PROMPTS.grade, {
+          prompt: exercise?.prompt || "",
+          behaviour: exercise?.behaviour || "",
+          compileNote:
+            body.compiled === false
+              ? `The program did NOT compile. Error: ${body.error}\nName the compile fix in plain beginner words, and say one encouraging thing. Never write a full corrected solution.`
+              : `The pass/fail verdict is decided by comparing output - you only write the coaching. If wrong, name the key issue and give ONE nudge. Never write a full corrected solution.`,
+        }),
         messages: [{ role: "user", content: `Student code:\n${body.code}\n\n${body.compiled === false ? `Compiler error:\n${body.error}` : `Program output:\n${body.stdout}`}` }],
         json: true,
         maxTokens: 3000,
@@ -86,7 +101,12 @@ export async function POST(req: Request) {
     const r = await complete<{ questions: QuizQuestion[] }>(
       {
         feature: "generate",
-        system: generateSystem({ lessonTitle: lesson.title, goal: lesson.goal, objectives, record }),
+        system: renderPrompt(prompts.generate || DEFAULT_PROMPTS.generate, {
+          lessonTitle: lesson.title,
+          goal: lesson.goal,
+          objectives: objectives ? `Target these objectives: ${objectives}` : "",
+          record: record ? `Student record: ${record}` : "",
+        }),
         messages: [{ role: "user", content: body.request ? `Student request: ${body.request}` : "Auto-target the student's weak spots." }],
         json: true,
         maxTokens: 8000,

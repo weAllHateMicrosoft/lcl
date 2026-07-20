@@ -64,24 +64,18 @@ export async function complete<T = unknown>(
   throw lastErr ?? new Error("no LLM lanes configured");
 }
 
-// Build the ordered list of lanes to try for a feature. Always ends with the
-// offline stub so the app never hard-fails on a missing/broken key.
+// Build the ordered list of lanes to try for a feature: every configured key is
+// a lane, tried in order and rotated on rate-limit/error (that's how multiple
+// keys extend your daily quota). A per-feature model override applies to each.
+// Always ends with the offline stub so the app never hard-fails.
 async function resolveLanes(feature: Feature): Promise<Lane[]> {
   const cfg = await getProviderConfig();
   const lanes: Lane[] = [];
-
-  if (cfg.provider !== "stub" && cfg.apiKey) {
-    lanes.push({
-      provider: cfg.provider,
-      apiKey: cfg.apiKey,
-      model: cfg.models[feature] || cfg.model,
-      baseUrl: cfg.baseUrl,
-    });
-    for (const fb of cfg.fallbacks) {
-      if (fb.apiKey) lanes.push({ provider: fb.provider, apiKey: fb.apiKey, model: fb.model, baseUrl: fb.baseUrl });
+  for (const k of cfg.keys) {
+    if (k.provider !== "stub" && k.apiKey) {
+      lanes.push({ provider: k.provider, apiKey: k.apiKey, model: cfg.models[feature] || k.model, baseUrl: k.baseUrl });
     }
   }
-
   lanes.push({ provider: "stub" as Provider, model: "stub" });
   return lanes;
 }

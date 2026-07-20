@@ -16,7 +16,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 
   const isOwner = me.role === "ADMIN" || test.ownerId === me.id;
   if (isOwner) {
-    return NextResponse.json({ owner: true, test: { id: test.id, title: test.title, questions, classId: test.classId, timeLimit: test.timeLimit, openAt: test.openAt, closeAt: test.closeAt, published: test.published } });
+    return NextResponse.json({ owner: true, test: { id: test.id, title: test.title, questions, classId: test.classId, timeLimit: test.timeLimit, openAt: test.openAt, closeAt: test.closeAt, published: test.published, requireSeb: test.requireSeb } });
   }
 
   // student path

@@ -56,6 +56,7 @@ export async function POST(req: Request) {
           timeLimit: b.timeLimit ?? null,
           openAt: b.openAt ? new Date(b.openAt) : null,
           closeAt: b.closeAt ? new Date(b.closeAt) : null,
+          requireSeb: b.requireSeb ?? false,
         },
       });
       return NextResponse.json({ ok: true });

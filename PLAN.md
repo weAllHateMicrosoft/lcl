@@ -77,6 +77,15 @@ than the prototypes is a regression, even if the backend is "more real".
       teacher overrides; student result view (`/tests/[id]/result`) with per-Q feedback,
       gated on release. Confirmed: save-without-publish already worked (DRAFT state).
 
+- [x] **API multi-key rotation + per-task model + prompt editor + budget dashboard + SEB (2026-07-20):**
+      LLM config reworked to a **keys[] list** (rotation lanes; adapter tries each in order, rotates
+      on rate-limit — stretches free quota), **per-task model override** (`models`), and **editable
+      prompt templates** (`prompts` in Settings, `{{placeholder}}` render, defaults in `lib/llm/prompts.ts`).
+      Old single-key config auto-migrates. Admin `/admin/usage` budget dashboard (spend/tokens, 14-day
+      chart, by task/model/user). **SEB** (`Test.requireSeb`): `/api/tests/[id]/seb` generates a .seb
+      config, exam page gates non-SEB requests with launch/download, builder checkbox. Highlight-jump
+      bug fixed (window.find + multi-node wrap — old single-node version failed on any cross-element selection).
+
 ## BACKLOG — pick one at a time (owner prefers incremental; I over-reach on big-bangs)
 Ordered by my recommendation, but owner chooses:
 - [x] **Dashboard declutter (done)** — student detail page now groups activity by lesson,

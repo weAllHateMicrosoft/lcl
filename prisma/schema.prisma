@@ -118,6 +118,7 @@ model Test {
   closeAt     DateTime?
   published   Boolean  @default(false) // students can take it
   resultsReleased Boolean @default(false) // students can see their marks + feedback
+  requireSeb  Boolean  @default(false) // must be opened in Safe Exam Browser
   submissions TestSubmission[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

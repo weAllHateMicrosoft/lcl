@@ -11,6 +11,7 @@ export default function TestBuilder({ id }: { id: string }) {
   const [classId, setClassId] = useState("");
   const [timeLimit, setTimeLimit] = useState<string>("");
   const [closeAt, setCloseAt] = useState("");
+  const [requireSeb, setRequireSeb] = useState(false);
   const [published, setPublished] = useState(false);
   const [classes, setClasses] = useState<{ id: string; name: string }[]>([]);
   const [saveState, setSaveState] = useState("");
@@ -20,7 +21,7 @@ export default function TestBuilder({ id }: { id: string }) {
   const [armed, setArmed] = useState<number | null>(null);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const state = useRef<any>({});
-  state.current = { title, questions, classId, timeLimit, closeAt };
+  state.current = { title, questions, classId, timeLimit, closeAt, requireSeb };
 
   useEffect(() => {
     fetch(`/api/tests/${id}`).then((r) => r.json()).then((d) => {
@@ -30,6 +31,7 @@ export default function TestBuilder({ id }: { id: string }) {
         setClassId(d.test.classId || "");
         setTimeLimit(d.test.timeLimit ? String(d.test.timeLimit) : "");
         setCloseAt(d.test.closeAt ? new Date(d.test.closeAt).toISOString().slice(0, 16) : "");
+        setRequireSeb(!!d.test.requireSeb);
         setPublished(d.test.published);
       }
     });
@@ -54,6 +56,7 @@ export default function TestBuilder({ id }: { id: string }) {
         classId: s.classId || null,
         timeLimit: s.timeLimit ? Number(s.timeLimit) : null,
         closeAt: s.closeAt || null,
+        requireSeb: s.requireSeb,
       }),
     });
     setSaveState("saved ✓");
@@ -137,6 +140,10 @@ export default function TestBuilder({ id }: { id: string }) {
             <input className="f" type="datetime-local" value={closeAt} onChange={(e) => edit(() => setCloseAt(e.target.value))} />
           </label>
         </div>
+        <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8, fontSize: 13.5 }}>
+          <input type="checkbox" checked={requireSeb} onChange={(e) => edit(() => setRequireSeb(e.target.checked))} />
+          <span><b>Require Safe Exam Browser</b> — students must open it in SEB (locked-down). {requireSeb && <a href={`/api/tests/${id}/seb`} style={{ textDecoration: "underline" }}>download .seb config</a>}</span>
+        </label>
         <div className="meta">{questions.length} questions · {maxPoints(questions)} points total</div>
       </div>
 

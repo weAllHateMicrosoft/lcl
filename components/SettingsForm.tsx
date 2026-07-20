@@ -1,112 +1,136 @@
 "use client";
 
 import { useState } from "react";
+import { DEFAULT_PROMPTS, PROMPT_PLACEHOLDERS } from "@/lib/llm/prompts";
 
+type KeyRow = { id: string; provider: string; model: string; label: string; hasKey: boolean; newKey?: string };
 type ClientCfg = {
-  provider: string;
-  model: string;
+  keys: { id: string; provider: string; model: string; label: string; hasKey: boolean }[];
   models: Record<string, string>;
-  hasKey: boolean;
-  fallbacks: { provider: string; model: string; hasKey: boolean }[];
+  prompts: Record<string, string>;
 };
 
 const PROVIDERS = [
-  { id: "stub", label: "Offline stub (no key, canned responses)" },
-  { id: "gemini", label: "Google Gemini (free tier — recommended)" },
+  { id: "gemini", label: "Google Gemini (free tier)" },
   { id: "groq", label: "Groq (free, fast)" },
-  { id: "openrouter", label: "OpenRouter (many models, one key)" },
+  { id: "openrouter", label: "OpenRouter (many models)" },
   { id: "anthropic", label: "Anthropic (Claude)" },
 ];
-
-const MODEL_HINTS: Record<string, string> = {
-  gemini: "gemini-3.5-flash",
+const MODEL_HINT: Record<string, string> = {
+  gemini: "gemini-2.0-flash",
   groq: "llama-3.3-70b-versatile",
   openrouter: "meta-llama/llama-3.3-70b-instruct:free",
   anthropic: "claude-haiku-4-5",
-  stub: "stub",
 };
+const FEATURES: { key: string; label: string }[] = [
+  { key: "tutor", label: "Tutor chat" },
+  { key: "grade", label: "Grading / feedback" },
+  { key: "generate", label: "Question generation" },
+];
 
 export default function SettingsForm({ initial }: { initial: ClientCfg }) {
-  const [provider, setProvider] = useState(initial.provider);
-  const [apiKey, setApiKey] = useState("");
-  const [model, setModel] = useState(initial.model === "stub" ? "" : initial.model);
+  const [keys, setKeys] = useState<KeyRow[]>(initial.keys.length ? initial.keys : []);
   const [models, setModels] = useState<Record<string, string>>(initial.models || {});
+  const [prompts, setPrompts] = useState<Record<string, string>>(initial.prompts || {});
   const [status, setStatus] = useState("");
-  const [testing, setTesting] = useState(false);
 
-  const trainsOnData = provider !== "anthropic" && provider !== "stub";
+  const rid = () => Math.random().toString(36).slice(2, 10);
+  const addKey = () => setKeys((k) => [...k, { id: rid(), provider: "gemini", model: "", label: "", hasKey: false }]);
+  const setKey = (id: string, patch: Partial<KeyRow>) => setKeys((k) => k.map((r) => (r.id === id ? { ...r, ...patch } : r)));
+  const delKey = (id: string) => setKeys((k) => k.filter((r) => r.id !== id));
 
   async function save() {
     setStatus("saving…");
     await fetch("/api/settings", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ provider, apiKey, model: model || MODEL_HINTS[provider], models }),
+      body: JSON.stringify({
+        keys: keys.map((k) => ({ id: k.id, provider: k.provider, model: k.model || MODEL_HINT[k.provider], label: k.label, apiKey: k.newKey || undefined })),
+        models,
+        prompts,
+      }),
     });
-    setApiKey("");
-    setStatus("saved ✓ — key encrypted at rest");
+    setKeys((k) => k.map((r) => ({ ...r, newKey: undefined, hasKey: r.hasKey || !!r.newKey })));
+    setStatus("saved ✓ — keys encrypted at rest");
   }
 
-  async function test() {
-    setTesting(true);
-    setStatus("testing…");
+  async function testKey(k: KeyRow) {
+    setStatus(`testing ${k.label || k.provider}…`);
     const r = await fetch("/api/settings/test", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ provider, apiKey, model: model || MODEL_HINTS[provider] }),
+      body: JSON.stringify({ id: k.id, provider: k.provider, apiKey: k.newKey, model: k.model || MODEL_HINT[k.provider] }),
     }).then((x) => x.json());
     setStatus(r.message);
-    setTesting(false);
   }
 
   return (
-    <div style={{ maxWidth: 620 }}>
-      <label className="field">
-        <span className="l">Provider</span>
-        <select className="f" value={provider} onChange={(e) => { setProvider(e.target.value); setModel(""); }}>
-          {PROVIDERS.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.label}
-            </option>
-          ))}
-        </select>
-      </label>
+    <div style={{ maxWidth: 720 }}>
+      {/* ── Keys / rotation ── */}
+      <h2 style={{ fontFamily: "var(--serif)", fontSize: 18, margin: "8px 0 4px" }}>API keys</h2>
+      <p style={{ color: "var(--muted)", fontSize: 13.5, marginBottom: 10 }}>
+        Add several keys — the app tries them <b>in order and rotates to the next when one hits its rate limit</b>, so multiple
+        free keys stretch your daily quota. Runs offline (canned) if none work.
+      </p>
 
-      {provider !== "stub" && (
-        <>
-          <label className="field">
-            <span className="l">
-              API key {initial.hasKey && <span className="hint">— a key is already saved; leave blank to keep it</span>}
-            </span>
-            <input className="f" type="password" value={apiKey} onChange={(e) => setApiKey(e.target.value)} placeholder={initial.hasKey ? "•••••••• (unchanged)" : "paste your key"} />
-          </label>
+      {keys.map((k, i) => (
+        <div className="classcard" key={k.id}>
+          <div className="cchead">
+            <span style={{ fontFamily: "var(--mono)", fontSize: 11, color: "var(--muted)" }}>#{i + 1}</span>
+            <select className="f" style={{ maxWidth: 200 }} value={k.provider} onChange={(e) => setKey(k.id, { provider: e.target.value })}>
+              {PROVIDERS.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}
+            </select>
+            <input className="f" style={{ maxWidth: 130 }} value={k.label} placeholder="label (optional)" onChange={(e) => setKey(k.id, { label: e.target.value })} />
+            <span style={{ flex: 1 }} />
+            <button className="tbtn2" onClick={() => testKey(k)} title="Test this key">test</button>
+            <button className="tbtn2 danger" onClick={() => delKey(k.id)}>✕</button>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 8 }}>
+            <input className="f" type="password" value={k.newKey || ""} placeholder={k.hasKey ? "•••••••• saved (blank = keep)" : "paste API key"} onChange={(e) => setKey(k.id, { newKey: e.target.value })} />
+            <input className="f" value={k.model} placeholder={`model — e.g. ${MODEL_HINT[k.provider]}`} onChange={(e) => setKey(k.id, { model: e.target.value })} />
+          </div>
+        </div>
+      ))}
+      <button className="btn ghost" onClick={addKey}>+ Add key</button>
 
-          <label className="field">
-            <span className="l">Model <span className="hint">— e.g. {MODEL_HINTS[provider]}</span></span>
-            <input className="f" value={model} onChange={(e) => setModel(e.target.value)} placeholder={MODEL_HINTS[provider]} />
-          </label>
+      {/* ── Per-task model ── */}
+      <h2 style={{ fontFamily: "var(--serif)", fontSize: 18, margin: "22px 0 4px" }}>Model per task</h2>
+      <p style={{ color: "var(--muted)", fontSize: 13.5, marginBottom: 10 }}>
+        Optional: force a specific model for each task (leave blank to use each key's model). Handy for a cheap model on
+        grading and a stronger one on the tutor.
+      </p>
+      {FEATURES.map((f) => (
+        <label className="field" key={f.key} style={{ display: "grid", gridTemplateColumns: "180px 1fr", alignItems: "center", gap: 10, margin: "6px 0" }}>
+          <span className="l" style={{ margin: 0 }}>{f.label}</span>
+          <input className="f" value={models[f.key] || ""} placeholder="(use the key's model)" onChange={(e) => setModels((m) => ({ ...m, [f.key]: e.target.value }))} />
+        </label>
+      ))}
 
-          <details style={{ margin: "10px 0" }}>
-            <summary style={{ cursor: "pointer", fontSize: 13, fontWeight: 600 }}>Per-feature model overrides (optional)</summary>
-            {(["tutor", "grade", "generate"] as const).map((f) => (
-              <label className="field" key={f}>
-                <span className="l" style={{ textTransform: "capitalize" }}>{f}</span>
-                <input className="f" value={models[f] || ""} onChange={(e) => setModels((m) => ({ ...m, [f]: e.target.value }))} placeholder={`default: ${model || MODEL_HINTS[provider]}`} />
-              </label>
-            ))}
-          </details>
+      {/* ── Prompts ── */}
+      <h2 style={{ fontFamily: "var(--serif)", fontSize: 18, margin: "22px 0 4px" }}>AI prompts</h2>
+      <p style={{ color: "var(--muted)", fontSize: 13.5, marginBottom: 10 }}>
+        Edit how the AI is instructed. Blank = the built-in default. Keep the <code>{"{{placeholders}}"}</code> or they render empty.
+      </p>
+      {FEATURES.map((f) => (
+        <div key={f.key} className="field" style={{ margin: "10px 0" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span className="l" style={{ margin: 0 }}>{f.label} prompt</span>
+            <span className="meta" style={{ margin: 0 }}>placeholders: {(PROMPT_PLACEHOLDERS[f.key] || []).map((p) => `{{${p}}}`).join(" ")}</span>
+            <span style={{ flex: 1 }} />
+            <button className="tbtn2" onClick={() => setPrompts((p) => ({ ...p, [f.key]: (DEFAULT_PROMPTS as any)[f.key] }))}>load default</button>
+            <button className="tbtn2" onClick={() => setPrompts((p) => ({ ...p, [f.key]: "" }))}>reset</button>
+          </div>
+          <textarea className="f" rows={5} style={{ fontFamily: "var(--mono)", fontSize: 12 }} value={prompts[f.key] || ""} placeholder="Using the built-in default — type here to override…" onChange={(e) => setPrompts((p) => ({ ...p, [f.key]: e.target.value }))} />
+        </div>
+      ))}
 
-          {trainsOnData && (
-            <div className="notice">
-              ⚠ <b>Privacy:</b> most free tiers train on submitted prompts. Fine for lesson content and synthetic practice — but weigh it before sending real student data through this provider (ties to your board-policy checkpoint).
-            </div>
-          )}
-        </>
-      )}
+      <div className="notice">
+        ⚠ <b>Privacy:</b> most free tiers train on submitted prompts. Fine for lesson content and synthetic practice — weigh it
+        before sending real student data.
+      </div>
 
-      <div className="runrow" style={{ marginTop: 16 }}>
-        <button className="btn green" onClick={save}>Save</button>
-        <button className="btn ghost" onClick={test} disabled={testing}>Test key</button>
+      <div className="runrow" style={{ marginTop: 14 }}>
+        <button className="btn green" onClick={save}>Save all settings</button>
         {status && <span className="meta" style={{ margin: 0 }}>{status}</span>}
       </div>
     </div>

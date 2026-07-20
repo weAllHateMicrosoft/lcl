@@ -86,7 +86,7 @@ export async function POST(req: Request) {
       await prisma.lessonVersion.create({
         data: {
           lessonId: l.id,
-          snapshot: { title: l.title, goal: l.goal, objectives: l.objectives, blocks: l.blocks, exercise: l.exercise, quizBank: l.quizBank } as any,
+          snapshot: { title: l.title, goal: l.goal, objectives: l.objectives, blocks: l.blocks, exercise: l.exercise, quizBank: l.quizBank, masteryQuiz: l.masteryQuiz } as any,
         },
       });
       const d = l.draft as any;
@@ -99,6 +99,7 @@ export async function POST(req: Request) {
           blocks: d.blocks ?? l.blocks,
           exercise: d.exercise ?? l.exercise,
           quizBank: d.quizBank ?? l.quizBank,
+          masteryQuiz: d.masteryQuiz ?? l.masteryQuiz ?? undefined,
           draft: Prisma.DbNull,
           draftAt: null,
         },

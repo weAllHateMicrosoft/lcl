@@ -51,7 +51,8 @@ export default async function LessonPage({
   // full bank — the clean quiz's answer key — stays server-side (/api/quiz).
   const bank = (lesson.quizBank as unknown as QuizQuestion[]) || [];
   const practiceQuestions = bank.slice(0, 3);
-  const hasBank = bank.length > 0;
+  // The clean quiz exists if there's a typed mastery quiz OR a legacy bank.
+  const hasMastery = ((lesson.masteryQuiz as unknown as unknown[]) || []).length > 0 || bank.length > 0;
 
   return (
     <>
@@ -95,7 +96,7 @@ export default async function LessonPage({
         lessonTitle={lesson.title}
         exercise={exercise}
         practiceQuestions={practiceQuestions}
-        hasBank={hasBank}
+        hasBank={hasMastery}
         mastered={status === "MASTERED"}
       />
       <StudentTools lessonCode={lesson.code} askTeacher={askTeacher} />

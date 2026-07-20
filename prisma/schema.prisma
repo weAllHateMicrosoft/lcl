@@ -41,8 +41,11 @@ model Lesson {
   blocks    Json
   // Graded coding exercise: { prompt, starter, expected, behaviour, stdin }
   exercise  Json
-  // Pool the practice + summative quizzes draw from: [{ q, opts[], correct, why }]
+  // Legacy MCQ pool ({q,opts,correct,why}) — still powers the old practice panel.
   quizBank  Json
+  // The mastery quiz: typed Question[]. One per lesson. Passing it (server-graded)
+  // is the ONLY path to MASTERED. Falls back to quizBank if unset.
+  masteryQuiz Json?
 
   // Learning objectives: string[] — concepts to cover / skills to master.
   // Shown to students, and fed to the AI tutor + question generator as scope.

@@ -1,7 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { currentUser } from "@/lib/auth";
-import ExamRunner from "@/components/student/ExamRunner";
+import MasteryQuizRunner from "@/components/student/MasteryQuizRunner";
 
 // Full-screen summative exam — its own tab, nothing else on screen, easier to
 // focus. Questions come from /api/quiz (no answers); grading is server-side.
@@ -25,7 +25,7 @@ export default async function ExamPage({ params }: { params: Promise<{ code: str
           Summative. Pass ≥ 75% → <b>MASTERED</b>. Practice never sets Mastered — this does. You can close this tab and retake
           any time.
         </p>
-        <ExamRunner lessonCode={lesson.code} lessonTitle={lesson.title} />
+        <MasteryQuizRunner lessonCode={lesson.code} lessonTitle={lesson.title} />
       </div>
     </div>
   );

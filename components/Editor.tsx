@@ -11,12 +11,12 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { Block } from "@/lib/curriculum/blocks";
-import { blankQuestion, QUESTION_TYPES } from "@/lib/curriculum/questions";
+import { blankQuestion, QUESTION_TYPES, normalizeQuestions, type Question } from "@/lib/curriculum/questions";
 import QuestionEditor from "@/components/questions/QuestionEditor";
 
 type WBlock = { uid: string; b: Block };
-type Working = { title: string; goal: string; objectives: string[]; blocks: WBlock[]; exercise: any; quizBank: any[] };
-type Lesson = { id: string; code: string; title: string; goal: string; objectives?: string[]; blocks: Block[]; exercise: any; quizBank: any[]; draft: any; draftAt: string | null };
+type Working = { title: string; goal: string; objectives: string[]; blocks: WBlock[]; exercise: any; quizBank: any[]; masteryQuiz: Question[] };
+type Lesson = { id: string; code: string; title: string; goal: string; objectives?: string[]; blocks: Block[]; exercise: any; quizBank: any[]; masteryQuiz?: any[]; draft: any; draftAt: string | null };
 type Chapter = { id: string; title: string; order: number; lessons: Lesson[] };
 
 const uid = () => Math.random().toString(36).slice(2, 10);
@@ -72,8 +72,10 @@ export default function Editor() {
     const lesson = tree[s.c]?.lessons[s.l];
     lessonRef.current = lesson ?? null;
     if (!lesson) return setWorking(null);
-    const src = lesson.draft ?? { title: lesson.title, goal: lesson.goal, objectives: lesson.objectives, blocks: lesson.blocks, exercise: lesson.exercise, quizBank: lesson.quizBank };
+    const src = lesson.draft ?? { title: lesson.title, goal: lesson.goal, objectives: lesson.objectives, blocks: lesson.blocks, exercise: lesson.exercise, quizBank: lesson.quizBank, masteryQuiz: lesson.masteryQuiz };
     setHasDraft(Boolean(lesson.draft));
+    // Migrate a legacy quizBank into the typed mastery quiz on first edit.
+    const mastery = (src.masteryQuiz?.length ? src.masteryQuiz : normalizeQuestions(src.quizBank || [])) as Question[];
     setWorking({
       title: src.title ?? "",
       goal: src.goal ?? "",
@@ -81,6 +83,7 @@ export default function Editor() {
       blocks: (src.blocks ?? []).map((b: Block) => ({ uid: uid(), b })),
       exercise: src.exercise ?? {},
       quizBank: src.quizBank ?? [],
+      masteryQuiz: mastery,
     });
     setHistOpen(false);
     setSaveState(lesson.draft ? "draft loaded" : "");
@@ -108,7 +111,7 @@ export default function Editor() {
       if (!w || !lesson) return;
       await api("PUT", {
         id: lesson.id,
-        draft: { title: w.title, goal: w.goal, objectives: w.objectives, blocks: w.blocks.map((x) => x.b), exercise: w.exercise, quizBank: w.quizBank },
+        draft: { title: w.title, goal: w.goal, objectives: w.objectives, blocks: w.blocks.map((x) => x.b), exercise: w.exercise, quizBank: w.quizBank, masteryQuiz: w.masteryQuiz },
       });
       setSaveState("draft saved ✓");
     }, 800);
@@ -121,7 +124,7 @@ export default function Editor() {
     if (saveTimer.current) {
       clearTimeout(saveTimer.current);
       const w = workingRef.current!;
-      await api("PUT", { id: lesson.id, draft: { title: w.title, goal: w.goal, objectives: w.objectives, blocks: w.blocks.map((x) => x.b), exercise: w.exercise, quizBank: w.quizBank } });
+      await api("PUT", { id: lesson.id, draft: { title: w.title, goal: w.goal, objectives: w.objectives, blocks: w.blocks.map((x) => x.b), exercise: w.exercise, quizBank: w.quizBank, masteryQuiz: w.masteryQuiz } });
     }
     await api("POST", { action: "publish", lessonId: lesson.id });
     await reload(sel);
@@ -491,7 +494,7 @@ function EditableBlock({ block: b, uid: key, onChange }: { block: Block; uid: st
 /* ── graded exercise + quiz bank (structured, also drafted) ────────────── */
 function ExerciseAndQuiz({ working, mutate }: { working: Working; mutate: (fn: (w: Working) => void) => void }) {
   const ex = working.exercise || {};
-  const bank = working.quizBank || [];
+  const mq = working.masteryQuiz || [];
   return (
     <>
       <details className="histpanel" style={{ marginTop: 24 }} open={Boolean(ex.prompt)}>
@@ -514,27 +517,30 @@ function ExerciseAndQuiz({ working, mutate }: { working: Working; mutate: (fn: (
         </div>
       </details>
 
-      <details className="histpanel" open={bank.length > 0}>
+      <details className="histpanel" open={mq.length > 0}>
         <summary style={{ cursor: "pointer", fontWeight: 700 }}>
-          Quiz bank — {bank.length} questions {bank.length === 0 ? "(practice + clean quiz hidden)" : "(feeds practice + clean quiz)"}
+          🔒 Mastery quiz — {mq.length} question{mq.length === 1 ? "" : "s"} {mq.length === 0 ? "(clean quiz hidden)" : "· passing this → MASTERED"}
         </summary>
         <div style={{ marginTop: 10 }}>
-          {bank.map((q: any, qi: number) => (
-            <div key={qi} style={{ borderBottom: "1px dashed var(--line)", paddingBottom: 12, marginBottom: 12 }}>
-              <div className="itemrow">
-                <input className="f" style={{ flex: 1 }} defaultValue={q.q} placeholder="Question (HTML ok)" onChange={(e) => mutate((w) => (w.quizBank[qi].q = e.target.value))} />
-                <button onClick={() => mutate((w) => w.quizBank.splice(qi, 1))}>✕</button>
+          <p className="meta" style={{ marginTop: 0 }}>Any question type. Auto-graded ones (MCQ / T-F / short / code) decide the pass mark; the clean quiz opens full-screen.</p>
+          {mq.map((q, qi) => (
+            <div key={q.id} style={{ border: "1px solid var(--line)", borderRadius: 10, padding: 10, margin: "8px 0" }}>
+              <div className="qbuild-head">
+                <span className="qtype">{QUESTION_TYPES.find((t) => t.type === q.type)?.label}</span>
+                <span style={{ flex: 1 }} />
+                <button className="tbtn2" disabled={qi === 0} onClick={() => mutate((w) => { const a = w.masteryQuiz; [a[qi - 1], a[qi]] = [a[qi], a[qi - 1]]; })}>↑</button>
+                <button className="tbtn2" disabled={qi === mq.length - 1} onClick={() => mutate((w) => { const a = w.masteryQuiz; [a[qi + 1], a[qi]] = [a[qi], a[qi + 1]]; })}>↓</button>
+                <button className="tbtn2 danger" onClick={() => mutate((w) => w.masteryQuiz.splice(qi, 1))}>✕</button>
               </div>
-              {(q.opts || []).map((opt: string, oi: number) => (
-                <div className="itemrow" key={oi}>
-                  <input type="radio" style={{ width: 20, flex: "0 0 20px" }} checked={q.correct === oi} onChange={() => mutate((w) => (w.quizBank[qi].correct = oi))} title="Correct answer" />
-                  <input className="f" defaultValue={opt} placeholder={`Option ${"ABCD"[oi] || oi + 1}`} onChange={(e) => mutate((w) => (w.quizBank[qi].opts[oi] = e.target.value))} />
-                </div>
-              ))}
-              <input className="f" defaultValue={q.why || ""} placeholder="Why (one-line explanation)" onChange={(e) => mutate((w) => (w.quizBank[qi].why = e.target.value))} />
+              <QuestionEditor q={q} onChange={(nq) => mutate((w) => (w.masteryQuiz[qi] = nq))} />
             </div>
           ))}
-          <button className="addbtn" onClick={() => mutate((w) => w.quizBank.push({ q: "", opts: ["", "", "", ""], correct: 0, why: "" }))}>+ question</button>
+          <div className="addbar" style={{ margin: "8px 0" }}>
+            <div className="lbl">Add question</div>
+            {QUESTION_TYPES.map((t) => (
+              <button key={t.type} onClick={() => mutate((w) => w.masteryQuiz.push(blankQuestion(t.type)))}>{t.label}</button>
+            ))}
+          </div>
         </div>
       </details>
     </>

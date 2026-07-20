@@ -100,8 +100,12 @@ Ordered by my recommendation, but owner chooses:
       dark palette overrides in globals.css. May need contrast tweaks by eye (owner can iterate).
       STILL DEFERRED (own turns): prompt-persona editor + AI budget dashboard (part of #4 originally).
 
-1. **Quizzes-inside-lessons** — let a lesson embed a Test (replace the legacy quizBank UI with
-   the typed question system). Biggest structural item; unifies the two quiz paths.
+- [x] **Quizzes-inside-lessons (DONE 2026-07-20)** — a `quiz` block (`type:"quiz"`, typed
+   questions) placeable anywhere in a lesson via the editor. Answer-stripped for students,
+   graded server-side (`/api/lesson/quiz`), formative → feeds readiness. `LessonQuizBlock`
+   renders it interactively (reader) or as a summary (editor preview). Legacy quizBank still
+   powers the mastery clean-quiz; the old in-workspace practice panel still shows when a
+   lesson has a quizBank (both can coexist — teacher's choice).
 3. **Gradebook** — collect Test finalScores + lesson mastery into one grades view per class,
    plus student "my grades".
 4. **Account management** — admin adds/edits teachers, everyone edits name + avatar (User.avatar

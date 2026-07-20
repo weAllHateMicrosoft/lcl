@@ -11,6 +11,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { Block } from "@/lib/curriculum/blocks";
+import { blankQuestion, QUESTION_TYPES } from "@/lib/curriculum/questions";
+import QuestionEditor from "@/components/questions/QuestionEditor";
 
 type WBlock = { uid: string; b: Block };
 type Working = { title: string; goal: string; objectives: string[]; blocks: WBlock[]; exercise: any; quizBank: any[] };
@@ -26,6 +28,7 @@ const BLOCK_TYPES: { label: string; make: () => Block }[] = [
   { label: "≔ Terms", make: () => ({ type: "terms", items: [["term", "definition"]] }) },
   { label: "? Check", make: () => ({ type: "check", items: [["Question?", "Answer."]] }) },
   { label: "✎ Try it", make: () => ({ type: "exercise", html: "Try this…", meta: "" }) },
+  { label: "📝 Quiz", make: () => ({ type: "quiz", id: uid(), title: "Quick check", questions: [blankQuestion("mcq")] }) },
 ];
 
 async function api(method: "PUT" | "POST", body: unknown) {
@@ -453,6 +456,31 @@ function EditableBlock({ block: b, uid: key, onChange }: { block: Block; uid: st
           <div className="ch">✎ Try it</div>
           <InlineHtml key={key} html={b.html} onChange={(h) => onChange({ ...b, html: h })} className="" placeholder="Exercise prompt…" />
           <input className="f" style={{ marginTop: 8, fontFamily: "var(--mono)", fontSize: 11 }} defaultValue={b.meta || ""} placeholder="meta, e.g. checks: 3 lines of output" onChange={(e) => onChange({ ...b, meta: e.target.value })} />
+        </div>
+      );
+    case "quiz":
+      return (
+        <div className="tryit" style={{ borderColor: "var(--accent-2)" }}>
+          <div className="ch" style={{ color: "var(--accent-2)" }}>📝 In-lesson quiz</div>
+          <input className="f" value={b.title || ""} placeholder="Quiz title" onChange={(e) => onChange({ ...b, title: e.target.value })} />
+          {b.questions.map((q, i) => (
+            <div key={q.id} style={{ border: "1px solid var(--line)", borderRadius: 10, padding: 10, margin: "8px 0" }}>
+              <div className="qbuild-head">
+                <span className="qtype">{QUESTION_TYPES.find((t) => t.type === q.type)?.label}</span>
+                <span style={{ flex: 1 }} />
+                <button className="tbtn2" disabled={i === 0} onClick={() => { const qs = [...b.questions]; [qs[i - 1], qs[i]] = [qs[i], qs[i - 1]]; onChange({ ...b, questions: qs }); }}>↑</button>
+                <button className="tbtn2" disabled={i === b.questions.length - 1} onClick={() => { const qs = [...b.questions]; [qs[i + 1], qs[i]] = [qs[i], qs[i + 1]]; onChange({ ...b, questions: qs }); }}>↓</button>
+                <button className="tbtn2 danger" onClick={() => onChange({ ...b, questions: b.questions.filter((_, j) => j !== i) })}>✕</button>
+              </div>
+              <QuestionEditor q={q} onChange={(nq) => onChange({ ...b, questions: b.questions.map((x, j) => (j === i ? nq : x)) })} />
+            </div>
+          ))}
+          <div className="addbar" style={{ margin: "8px 0" }}>
+            <div className="lbl">Add question</div>
+            {QUESTION_TYPES.map((t) => (
+              <button key={t.type} onClick={() => onChange({ ...b, questions: [...b.questions, blankQuestion(t.type)] })}>{t.label}</button>
+            ))}
+          </div>
         </div>
       );
     default:

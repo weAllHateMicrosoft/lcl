@@ -1,6 +1,8 @@
 // The canonical block model. One shape, rendered by <LessonRenderer>, edited by
 // the admin CMS. This is what lives in Lesson.blocks (JSON) in the database.
 
+import type { Question } from "./questions";
+
 export type Block =
   | { type: "heading"; text: string }
   | { type: "prose"; html: string }
@@ -8,7 +10,11 @@ export type Block =
   | { type: "callout"; kind: "mistake" | "tip" | "note"; title: string; html: string }
   | { type: "terms"; items: [string, string][] }
   | { type: "check"; items: [string, string][] } // concept checks, answer hidden
-  | { type: "exercise"; html: string; meta?: string };
+  | { type: "exercise"; html: string; meta?: string }
+  // An inline quiz placed anywhere in the lesson (typed questions, formative).
+  // `id` is stable so the server can find + grade it; answers are stripped
+  // before the block reaches a student's browser.
+  | { type: "quiz"; id: string; title?: string; questions: Question[] };
 
 export type Exercise = {
   prompt: string;

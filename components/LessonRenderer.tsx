@@ -1,19 +1,20 @@
 import type { Block } from "@/lib/curriculum/blocks";
+import LessonQuizBlock from "./lesson/LessonQuizBlock";
 
 // The single renderer for lesson content — used by the student reader AND the
-// editor's live preview. Styles ported from the prototypes (lesson body +
-// editor .pv). HTML in prose/callouts is trusted CMS content authored by staff.
-export default function LessonRenderer({ blocks }: { blocks: Block[] }) {
+// editor's live preview. When `lessonCode` is passed (student reader), inline
+// quiz blocks are interactive; without it (editor preview), they show a summary.
+export default function LessonRenderer({ blocks, lessonCode }: { blocks: Block[]; lessonCode?: string }) {
   return (
     <div className="lesson-body">
       {blocks.map((b, i) => (
-        <BlockView key={i} block={b} />
+        <BlockView key={i} block={b} lessonCode={lessonCode} />
       ))}
     </div>
   );
 }
 
-function BlockView({ block: b }: { block: Block }) {
+function BlockView({ block: b, lessonCode }: { block: Block; lessonCode?: string }) {
   switch (b.type) {
     case "heading":
       return <h2>{b.text}</h2>;
@@ -70,6 +71,15 @@ function BlockView({ block: b }: { block: Block }) {
           <div className="ch">✎ Try it</div>
           <p dangerouslySetInnerHTML={{ __html: b.html }} />
           {b.meta && <div className="meta">{b.meta}</div>}
+        </div>
+      );
+    case "quiz":
+      return lessonCode ? (
+        <LessonQuizBlock lessonCode={lessonCode} blockId={b.id} title={b.title} questions={b.questions as any} />
+      ) : (
+        <div className="tryit" style={{ borderColor: "var(--accent-2)" }}>
+          <div className="ch" style={{ color: "var(--accent-2)" }}>📝 {b.title || "Quiz"}</div>
+          <div className="meta">{b.questions.length} question{b.questions.length === 1 ? "" : "s"} — interactive for students</div>
         </div>
       );
     default:

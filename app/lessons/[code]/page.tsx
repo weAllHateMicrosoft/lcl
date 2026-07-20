@@ -7,6 +7,7 @@ import LessonWorkspace from "@/components/LessonWorkspace";
 import StudentTools from "@/components/student/StudentTools";
 import HighlightOnLoad from "@/components/lesson/HighlightOnLoad";
 import type { Block, Exercise, QuizQuestion } from "@/lib/curriculum/blocks";
+import { stripAnswers } from "@/lib/curriculum/questions";
 
 export default async function LessonPage({
   params,
@@ -30,7 +31,10 @@ export default async function LessonPage({
   const pill = status === "MASTERED" ? "m" : status === "IN_PROGRESS" ? "p" : "n";
   const pillText = status === "MASTERED" ? "● MASTERED" : status === "IN_PROGRESS" ? "● IN PROGRESS" : "○ NOT STARTED";
 
-  const blocks = lesson.blocks as unknown as Block[];
+  // Strip answer keys out of any inline quiz blocks before they reach the browser.
+  const blocks = (lesson.blocks as unknown as Block[]).map((b) =>
+    b.type === "quiz" ? { ...b, questions: b.questions.map(stripAnswers) } : b
+  ) as Block[];
   const exercise = lesson.exercise as unknown as Exercise;
   const objectives = (lesson.objectives as unknown as string[]) || [];
 
@@ -82,7 +86,7 @@ export default async function LessonPage({
             </ul>
           </div>
         )}
-        <LessonRenderer blocks={blocks} />
+        <LessonRenderer blocks={blocks} lessonCode={lesson.code} />
       </div>
       {highlight && <HighlightOnLoad text={highlight} />}
 

@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { currentUser } from "@/lib/auth";
 import Forbidden from "@/components/Forbidden";
+import Collapsible from "@/components/Collapsible";
 import ClassManager from "@/components/teacher/ClassManager";
 import AskTeacherToggle from "@/components/teacher/AskTeacherToggle";
 import { getSetting } from "@/lib/settings";
@@ -115,8 +116,8 @@ export default async function TeacherDashboard() {
         </div>
 
         {agg.length > 0 && (
-          <>
-            <h2 style={{ fontFamily: "var(--serif)", fontSize: 20, margin: "26px 0 10px" }}>Lesson difficulty signals</h2>
+          <div style={{ marginTop: 20 }}>
+            <Collapsible title="Lesson difficulty signals" storageKey="t-difficulty" defaultOpen={false}>
             <div className="dashgrid">
               <table>
                 <thead>
@@ -157,7 +158,8 @@ export default async function TeacherDashboard() {
               </table>
             </div>
             <p className="dashnote">Sorted hardest-first by average score — a low line here usually means the lesson or its quiz needs attention, not the students.</p>
-          </>
+            </Collapsible>
+          </div>
         )}
 
         <p className="dashnote">

@@ -252,6 +252,7 @@ export default function Editor() {
                 </>
               )}
               <button className="btn ghost" onClick={toggleHistory}>History</button>
+              <a className="btn ghost" href="/admin/authoring" style={{ textDecoration: "none" }} title="Draft whole units with an external AI, then import">✦ AI authoring</a>
               <button className="btn ghost" onClick={async () => { await api("POST", { action: "duplicateLesson", lessonId: lesson.id }); reload(); }}>Duplicate</button>
               <button
                 className="btn orange"

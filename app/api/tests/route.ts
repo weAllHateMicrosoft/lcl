@@ -2,7 +2,15 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireRoleApi } from "@/lib/auth";
 import { normalizeQuestions, maxPoints } from "@/lib/curriculum/questions";
+import { syncTestAssignment } from "@/lib/google";
 import type { User } from "@prisma/client";
+
+function originOf(req: Request): string {
+  const h = req.headers;
+  const host = h.get("x-forwarded-host") || h.get("host") || "localhost:3000";
+  const proto = h.get("x-forwarded-proto") || (host.includes("localhost") ? "http" : "https");
+  return `${proto}://${host}`;
+}
 
 // Test authoring (teacher/admin). GET lists your tests; POST does actions.
 async function ownsTest(me: User, testId: string) {
@@ -63,8 +71,31 @@ export async function POST(req: Request) {
     }
     case "publish": {
       if (!(await ownsTest(me, b.id))) return NextResponse.json({ error: "not yours" }, { status: 403 });
-      await prisma.test.update({ where: { id: b.id }, data: { published: b.published !== false } });
-      return NextResponse.json({ ok: true });
+      const publishing = b.published !== false;
+      await prisma.test.update({ where: { id: b.id }, data: { published: publishing } });
+
+      // Auto-sync to Google Classroom if this test's class is linked.
+      let google: { synced: boolean; error?: string } | null = null;
+      if (publishing) {
+        const test = await prisma.test.findUnique({ where: { id: b.id }, include: { class: true } });
+        if (test?.class?.googleCourseId && test.ownerId) {
+          const r = await syncTestAssignment(test.ownerId, test.class.googleCourseId, {
+            title: test.title,
+            description: `Take this test in classOS. (Do not submit here — your marks come from classOS.)`,
+            maxPoints: maxPoints(normalizeQuestions(test.questions as any[])),
+            examUrl: `${originOf(req)}/exam/test/${test.id}`,
+            closeAt: test.closeAt,
+            existingId: test.googleCourseWorkId,
+          });
+          if (r.ok && r.id) {
+            await prisma.test.update({ where: { id: test.id }, data: { googleCourseWorkId: r.id } });
+            google = { synced: true };
+          } else {
+            google = { synced: false, error: r.error };
+          }
+        }
+      }
+      return NextResponse.json({ ok: true, google });
     }
     case "releaseResults": {
       if (!(await ownsTest(me, b.id))) return NextResponse.json({ error: "not yours" }, { status: 403 });

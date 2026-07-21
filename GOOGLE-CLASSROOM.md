@@ -43,9 +43,14 @@ Set in `.env` (local) **and** Vercel (production):
       fixed, token-refresh foundation (`lib/google.ts`), connect flow persists tokens to the
       signed-in teacher (`/api/auth/google` → consent, `/callback` → store + redirect
       `/teacher?google=connected`).
-- [ ] Step 2 — "Connect Google Classroom" button in ClassManager; course picker; link a course.
-- [ ] Step 3 — assignment sync on Test publish (with `dueDate` from `closeAt`), grade passback
-      on grading, announcement sync from the class board.
+- [x] Step 2 — Connect banner + Disconnect in ClassManager; per-class course picker
+      (`/api/google` GET lists courses, POST link/unlink); `Class.googleCourseId/Name`.
+- [x] Step 3a — **assignment sync on Test publish**: publishing a test whose class is linked
+      creates/updates a Google assignment (link material → the classOS exam URL, `maxPoints`,
+      `dueDate`/`dueTime` from `closeAt`). Stored on `Test.googleCourseWorkId` (no dupes).
+- [ ] Step 3b — **grade passback** (needs student ↔ Google-submission mapping by email;
+      `studentSubmissions.patch` with `draftGrade`/`assignedGrade` then `.return`).
+- [ ] Step 3c — announcement sync (once the class board exists) + roster import.
 
 ## The `?google=` redirect codes (for the ClassManager UI)
 `connected` · `denied` · `nocode` · `badstate` · `exchange` · `norefresh` · `error`

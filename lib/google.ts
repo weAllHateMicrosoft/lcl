@@ -140,3 +140,42 @@ export const createAnnouncement = (userId: string, courseId: string, text: strin
   googleFetch(userId, `/courses/${courseId}/announcements`, { method: "POST", body: JSON.stringify({ text, state: "PUBLISHED" }) });
 export const createCoursework = (userId: string, courseId: string, work: Record<string, unknown>) =>
   googleFetch(userId, `/courses/${courseId}/courseWork`, { method: "POST", body: JSON.stringify({ workType: "ASSIGNMENT", state: "PUBLISHED", ...work }) });
+
+// Create or update a Google Classroom assignment that links to a classOS test.
+// closeAt → the assignment's dueDate/dueTime (shows on students' Google Calendar).
+export async function syncTestAssignment(
+  userId: string,
+  courseId: string,
+  opts: { title: string; description: string; maxPoints: number; examUrl: string; closeAt: Date | null; existingId?: string | null }
+): Promise<{ ok: boolean; id?: string; error?: string }> {
+  const due = opts.closeAt
+    ? {
+        dueDate: { year: opts.closeAt.getUTCFullYear(), month: opts.closeAt.getUTCMonth() + 1, day: opts.closeAt.getUTCDate() },
+        dueTime: { hours: opts.closeAt.getUTCHours(), minutes: opts.closeAt.getUTCMinutes(), seconds: 0 },
+      }
+    : {};
+
+  if (opts.existingId) {
+    // maxPoints/workType aren't patchable; update the safe fields only.
+    const mask = "title,description,dueDate,dueTime";
+    const r = await googleFetch(userId, `/courses/${courseId}/courseWork/${opts.existingId}?updateMask=${mask}`, {
+      method: "PATCH",
+      body: JSON.stringify({ title: opts.title, description: opts.description, ...due }),
+    });
+    return r.ok ? { ok: true, id: opts.existingId } : { ok: false, error: r.data?.error?.message || `HTTP ${r.status}` };
+  }
+
+  const r = await googleFetch(userId, `/courses/${courseId}/courseWork`, {
+    method: "POST",
+    body: JSON.stringify({
+      title: opts.title,
+      description: opts.description,
+      workType: "ASSIGNMENT",
+      state: "PUBLISHED",
+      maxPoints: opts.maxPoints || undefined,
+      materials: [{ link: { url: opts.examUrl } }],
+      ...due,
+    }),
+  });
+  return r.ok && r.data?.id ? { ok: true, id: r.data.id } : { ok: false, error: r.data?.error?.message || `HTTP ${r.status}` };
+}

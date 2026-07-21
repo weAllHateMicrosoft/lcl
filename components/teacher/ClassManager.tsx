@@ -4,21 +4,45 @@
 // delete, and manage the roster (rename, remove, message, open a student's
 // full record). All actions POST to /api/classes (ownership enforced server-side).
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 type Student = { id: string; name: string };
-type ClassInfo = { id: string; name: string; joinCode: string; students: Student[] };
+type ClassInfo = { id: string; name: string; joinCode: string; students: Student[]; googleCourseId?: string | null; googleCourseName?: string | null };
+type Google = { connected: boolean; email?: string | null };
 
 async function action(body: object) {
   return fetch("/api/classes", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).then((r) => r.json());
 }
+async function gAction(body: object) {
+  return fetch("/api/google", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).then((r) => r.json());
+}
 
-export default function ClassManager({ classes }: { classes: ClassInfo[] }) {
+const G_MSG: Record<string, string> = {
+  connected: "✓ Google Classroom connected.",
+  denied: "You declined the Google permissions.",
+  norefresh: "Google didn't return a refresh token — disconnect classOS in your Google account, then reconnect.",
+  badstate: "Connection expired — try again.",
+  exchange: "Google rejected the sign-in — try again.",
+  error: "Something went wrong connecting to Google.",
+};
+
+export default function ClassManager({ classes, google }: { classes: ClassInfo[]; google: Google }) {
   const router = useRouter();
+  const params = useSearchParams();
   const [newName, setNewName] = useState("");
   const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState("");
+
+  useEffect(() => {
+    const g = params.get("google");
+    if (g && G_MSG[g]) {
+      setNote(G_MSG[g]);
+      router.refresh();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function create(e: React.FormEvent) {
     e.preventDefault();
@@ -36,8 +60,27 @@ export default function ClassManager({ classes }: { classes: ClassInfo[] }) {
         Your classes <span className="tag k">MANAGE</span>
       </h2>
 
+      {/* Google Classroom connection */}
+      <div className="gbanner">
+        <span>🎓 Google Classroom:</span>
+        {google.connected ? (
+          <>
+            <b>connected{google.email ? ` as ${google.email}` : ""}</b>
+            <span style={{ flex: 1 }} />
+            <button className="tbtn2" onClick={async () => { if (confirm("Disconnect Google Classroom? Assignment sync stops.")) { await gAction({ action: "disconnect" }); router.refresh(); } }}>Disconnect</button>
+          </>
+        ) : (
+          <>
+            <span style={{ color: "var(--muted)" }}>not connected — link it to sync tests as assignments</span>
+            <span style={{ flex: 1 }} />
+            <a className="btn" href="/api/auth/google" style={{ textDecoration: "none", padding: "6px 14px" }}>Connect</a>
+          </>
+        )}
+      </div>
+      {note && <div className="notice">{note}</div>}
+
       {classes.map((c) => (
-        <ClassCard key={c.id} c={c} onChange={() => router.refresh()} />
+        <ClassCard key={c.id} c={c} googleConnected={google.connected} onChange={() => router.refresh()} />
       ))}
 
       <form onSubmit={create} className="genrow" style={{ marginTop: 14, marginBottom: 0 }}>
@@ -48,11 +91,31 @@ export default function ClassManager({ classes }: { classes: ClassInfo[] }) {
   );
 }
 
-function ClassCard({ c, onChange }: { c: ClassInfo; onChange: () => void }) {
+function ClassCard({ c, googleConnected, onChange }: { c: ClassInfo; googleConnected: boolean; onChange: () => void }) {
   const [code, setCode] = useState(c.joinCode);
   const [renaming, setRenaming] = useState(false);
   const [name, setName] = useState(c.name);
   const [copied, setCopied] = useState(false);
+  const [picker, setPicker] = useState<null | { id: string; name: string; section?: string }[]>(null);
+  const [gLoading, setGLoading] = useState(false);
+
+  async function openPicker() {
+    setGLoading(true);
+    const d = await fetch("/api/google").then((r) => r.json());
+    setGLoading(false);
+    if (d.error) return alert(`Couldn't load Google courses: ${d.error}`);
+    setPicker(d.courses || []);
+  }
+  async function link(courseId: string, courseName: string) {
+    await gAction({ action: "link", classId: c.id, courseId, courseName });
+    setPicker(null);
+    onChange();
+  }
+  async function unlink() {
+    if (!confirm(`Unlink "${c.googleCourseName}" from this class?`)) return;
+    await gAction({ action: "unlink", classId: c.id });
+    onChange();
+  }
 
   async function regen() {
     if (!confirm("New code? The old one stops working (students already joined stay in).")) return;
@@ -110,6 +173,35 @@ function ClassCard({ c, onChange }: { c: ClassInfo; onChange: () => void }) {
         <button className="tbtn2" onClick={regen} title="New join code">↻</button>
         <button className="tbtn2 danger" onClick={del} title="Delete class">🗑</button>
       </div>
+
+      {googleConnected && (
+        <div className="glink">
+          {c.googleCourseId ? (
+            <>
+              <span>🎓 Linked to <b>{c.googleCourseName || "a Google course"}</b> — published tests sync here as assignments.</span>
+              <span style={{ flex: 1 }} />
+              <button className="tbtn2" onClick={unlink}>Unlink</button>
+            </>
+          ) : picker ? (
+            <div style={{ width: "100%" }}>
+              <div style={{ marginBottom: 6, fontSize: 13 }}>Pick a Google course to link:</div>
+              {picker.length === 0 && <div className="meta">No active Google courses found.</div>}
+              {picker.map((g) => (
+                <button key={g.id} className="btn ghost" style={{ display: "block", width: "100%", textAlign: "left", marginBottom: 4 }} onClick={() => link(g.id, g.name)}>
+                  {g.name}{g.section ? ` · ${g.section}` : ""}
+                </button>
+              ))}
+              <button className="tbtn2" onClick={() => setPicker(null)}>Cancel</button>
+            </div>
+          ) : (
+            <>
+              <span style={{ color: "var(--muted)" }}>Not linked to a Google course.</span>
+              <span style={{ flex: 1 }} />
+              <button className="tbtn2" onClick={openPicker} disabled={gLoading}>{gLoading ? "loading…" : "Link Google course"}</button>
+            </>
+          )}
+        </div>
+      )}
 
       {c.students.length > 0 && (
         <div className="roster">

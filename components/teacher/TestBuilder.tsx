@@ -96,8 +96,10 @@ export default function TestBuilder({ id }: { id: string }) {
 
   async function togglePublish() {
     await save();
-    await fetch("/api/tests", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "publish", id, published: !published }) });
+    const r = await fetch("/api/tests", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "publish", id, published: !published }) }).then((x) => x.json());
     setPublished(!published);
+    if (r.google) setSaveState(r.google.synced ? "published ✓ · synced to Google Classroom" : `published ✓ · Google sync failed: ${r.google.error || ""}`);
+    else setSaveState(!published ? "published ✓" : "unpublished");
   }
 
   async function aiGenerate(prompt: string, count: number) {

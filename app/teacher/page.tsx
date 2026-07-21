@@ -18,6 +18,7 @@ export default async function TeacherDashboard() {
     include: { students: { select: { id: true, name: true }, orderBy: { name: "asc" } } },
     orderBy: { createdAt: "asc" },
   });
+  const google = { connected: Boolean(me.googleRefreshToken), email: me.googleEmail };
   const studentFilter =
     me.role === "ADMIN" ? { role: "STUDENT" } : { role: "STUDENT", classId: { in: classes.map((c) => c.id) } };
 
@@ -55,7 +56,10 @@ export default async function TeacherDashboard() {
         <h1 className="title" style={{ marginBottom: 20 }}>
           Who's stuck, who's coasting
         </h1>
-        <ClassManager classes={classes.map((c) => ({ id: c.id, name: c.name, joinCode: c.joinCode, students: c.students }))} />
+        <ClassManager
+          google={google}
+          classes={classes.map((c) => ({ id: c.id, name: c.name, joinCode: c.joinCode, students: c.students, googleCourseId: c.googleCourseId, googleCourseName: c.googleCourseName }))}
+        />
         <div className="panel" style={{ marginBottom: 22, padding: "14px 18px" }}>
           <AskTeacherToggle initial={prefs.askTeacher === true} />
         </div>

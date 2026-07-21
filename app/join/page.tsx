@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { currentUser } from "@/lib/auth";
 import JoinForm from "@/components/JoinForm";
 import GoogleSignInButton from "@/components/GoogleSignInButton";
+import PracticeButton from "@/components/PracticeButton";
 
 export default async function JoinPage() {
   const me = await currentUser();
@@ -11,16 +12,24 @@ export default async function JoinPage() {
   return (
     <div className="authwrap">
       <div className="panel authcard">
-        <div className="crumb">STUDENT ENTRANCE</div>
+        <div className="crumb">START LEARNING</div>
         <h1 className="title" style={{ fontSize: 28, marginBottom: 6 }}>
-          Join your class
+          Practice Java
         </h1>
         <p style={{ color: "var(--muted)", marginBottom: 14, fontSize: 14 }}>
-          First time here: enter your class code, your name, your real email, and choose a password. Already joined? <b>Sign in instead.</b>
+          Lessons, an AI tutor, and a private coach that remembers your progress — no account required.
         </p>
-        <GoogleSignInButton label="Continue with Google" />
-        <div className="orsep"><span>or use a class code</span></div>
-        <JoinForm />
+        <PracticeButton />
+
+        <details style={{ marginTop: 18 }}>
+          <summary style={{ cursor: "pointer", color: "var(--muted)", fontSize: 13.5 }}>Have a class code?</summary>
+          <div style={{ marginTop: 12 }}>
+            <GoogleSignInButton label="Continue with Google" />
+            <div className="orsep"><span>or use a class code</span></div>
+            <JoinForm />
+          </div>
+        </details>
+
         <div className="authalt">
           Already have an account? <Link href="/login">Sign in →</Link>
         </div>

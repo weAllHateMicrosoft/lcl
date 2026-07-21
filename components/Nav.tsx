@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import ThemeToggle from "./ThemeToggle";
 
-type MiniUser = { id: string; name: string; role: string; className?: string | null; avatar?: string | null };
+type MiniUser = { id: string; name: string; role: string; className?: string | null; avatar?: string | null; anonymous?: boolean };
 
 export default function Nav({ me, cost, unread = 0 }: { me: MiniUser | null; cost: { total: number; calls: number } | null; unread?: number }) {
   const path = usePathname();
@@ -31,9 +31,10 @@ export default function Nav({ me, cost, unread = 0 }: { me: MiniUser | null; cos
               AI cost: ${cost.total.toFixed(5)} · {cost.calls} calls
             </div>
           )}
-          <div className="modelbox" title={me.className ? `Class: ${me.className}` : undefined}>
+          <div className="modelbox" title={me.anonymous ? "Private practice session — progress is saved to this browser only, no account" : me.className ? `Class: ${me.className}` : undefined}>
             <span className="avatar-sm">{me.avatar ? <img src={me.avatar} alt="" /> : me.name.slice(0, 1).toUpperCase()}</span>
             <span style={{ color: "#e9e4d8", fontFamily: "var(--sans)", fontWeight: 600, fontSize: 13 }}>{me.name}</span>
+            {me.anonymous && <span style={{ color: "var(--muted, #9a9488)", fontSize: 11, marginLeft: 2 }} title="private, on this device only">· guest</span>}
           </div>
           <nav className="viewswitch">
             {me.role === "STUDENT" ? (

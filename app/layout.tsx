@@ -36,7 +36,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       </head>
       <body>
         <Nav
-          me={me ? { id: me.id, name: me.name, role: me.role, className: cls?.name, avatar: me.avatar } : null}
+          me={me ? { id: me.id, name: me.name, role: me.role, className: cls?.name, avatar: me.avatar, anonymous: me.role === "STUDENT" && !me.email } : null}
           cost={cost ? { total: cost._sum.cost || 0, calls: cost._count } : null}
           unread={unread}
         />

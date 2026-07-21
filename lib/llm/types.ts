@@ -1,6 +1,6 @@
 export type Feature = "tutor" | "grade" | "generate" | "runjava";
 
-export type Provider = "stub" | "gemini" | "groq" | "openrouter" | "anthropic";
+export type Provider = "stub" | "gemini" | "groq" | "openrouter" | "anthropic" | "vertex";
 
 export interface ChatMessage {
   role: "user" | "assistant";
@@ -27,7 +27,8 @@ export interface LLMResult<T = unknown> {
 // One lane = one attempt target. The adapter tries the primary, then fallbacks.
 export interface Lane {
   provider: Provider;
-  apiKey?: string;
+  apiKey?: string; // for vertex, this is the service-account JSON
   model: string;
   baseUrl?: string; // for OpenAI-compatible providers
+  region?: string; // vertex: GCP location, e.g. "us-central1" or "global"
 }

@@ -1,4 +1,5 @@
 import type { CompleteArgs, Lane } from "./types";
+import { parseServiceAccount, vertexAccessToken, vertexBaseUrl, vertexModel } from "../vertex";
 
 // A raw provider call returns text + token usage; the adapter handles JSON
 // parsing, cost, and fallback on top of this.
@@ -23,9 +24,25 @@ export async function callProvider(lane: Lane, args: CompleteArgs): Promise<RawR
       return callStub(args);
     case "anthropic":
       return callAnthropic(lane, args);
+    case "vertex":
+      return callVertex(lane, args);
     default:
       return callOpenAICompat(lane, args);
   }
+}
+
+// ─── Vertex AI (service-account bearer → reuse the OpenAI-compat client) ──────
+
+async function callVertex(lane: Lane, args: CompleteArgs): Promise<RawResult> {
+  if (!lane.apiKey) throw new Error("missing Vertex service-account JSON");
+  const sa = parseServiceAccount(lane.apiKey);
+  const token = await vertexAccessToken(sa);
+  const region = lane.region || "us-central1";
+  // Delegate to the compat client with a minted bearer + Vertex's OpenAI URL.
+  return callOpenAICompat(
+    { provider: "vertex", apiKey: token, model: vertexModel(lane.model), baseUrl: vertexBaseUrl(sa.project_id, region) },
+    args
+  );
 }
 
 // ─── OpenAI-compatible (Groq / OpenRouter / Gemini-compat) ───────────────────

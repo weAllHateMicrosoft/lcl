@@ -3,9 +3,9 @@
 import { useState } from "react";
 import { DEFAULT_PROMPTS, PROMPT_PLACEHOLDERS } from "@/lib/llm/prompts";
 
-type KeyRow = { id: string; provider: string; model: string; label: string; hasKey: boolean; newKey?: string };
+type KeyRow = { id: string; provider: string; model: string; label: string; hasKey: boolean; newKey?: string; region?: string };
 type ClientCfg = {
-  keys: { id: string; provider: string; model: string; label: string; hasKey: boolean }[];
+  keys: { id: string; provider: string; model: string; label: string; hasKey: boolean; region?: string }[];
   models: Record<string, string>;
   prompts: Record<string, string>;
   smtp?: { host: string; port: number; user: string } | null;
@@ -16,12 +16,14 @@ const PROVIDERS = [
   { id: "groq", label: "Groq (free, fast)" },
   { id: "openrouter", label: "OpenRouter (many models)" },
   { id: "anthropic", label: "Anthropic (Claude)" },
+  { id: "vertex", label: "Google Vertex AI (Pro — uses GCP credits)" },
 ];
 const MODEL_HINT: Record<string, string> = {
   gemini: "gemini-2.0-flash",
   groq: "llama-3.3-70b-versatile",
   openrouter: "meta-llama/llama-3.3-70b-instruct:free",
   anthropic: "claude-haiku-4-5",
+  vertex: "gemini-2.5-pro",
 };
 const FEATURES: { key: string; label: string }[] = [
   { key: "tutor", label: "Tutor chat" },
@@ -47,7 +49,7 @@ export default function SettingsForm({ initial }: { initial: ClientCfg }) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        keys: keys.map((k) => ({ id: k.id, provider: k.provider, model: k.model || MODEL_HINT[k.provider], label: k.label, apiKey: k.newKey || undefined })),
+        keys: keys.map((k) => ({ id: k.id, provider: k.provider, model: k.model || MODEL_HINT[k.provider], label: k.label, apiKey: k.newKey || undefined, region: k.region || undefined })),
         models,
         prompts,
       }),
@@ -61,7 +63,7 @@ export default function SettingsForm({ initial }: { initial: ClientCfg }) {
     const r = await fetch("/api/settings/test", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: k.id, provider: k.provider, apiKey: k.newKey, model: k.model || MODEL_HINT[k.provider] }),
+      body: JSON.stringify({ id: k.id, provider: k.provider, apiKey: k.newKey, model: k.model || MODEL_HINT[k.provider], region: k.region }),
     }).then((x) => x.json());
     setStatus(r.message);
   }
@@ -87,10 +89,31 @@ export default function SettingsForm({ initial }: { initial: ClientCfg }) {
             <button className="tbtn2" onClick={() => testKey(k)} title="Test this key">test</button>
             <button className="tbtn2 danger" onClick={() => delKey(k.id)}>✕</button>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 8 }}>
-            <input className="f" type="password" value={k.newKey || ""} placeholder={k.hasKey ? "•••••••• saved (blank = keep)" : "paste API key"} onChange={(e) => setKey(k.id, { newKey: e.target.value })} />
-            <input className="f" value={k.model} placeholder={`model — e.g. ${MODEL_HINT[k.provider]}`} onChange={(e) => setKey(k.id, { model: e.target.value })} />
-          </div>
+          {k.provider === "vertex" ? (
+            <div style={{ marginTop: 8 }}>
+              <textarea
+                className="f"
+                rows={3}
+                style={{ fontFamily: "var(--mono)", fontSize: 11 }}
+                value={k.newKey || ""}
+                placeholder={k.hasKey ? '{…} service-account JSON saved (blank = keep)' : 'paste the whole service-account JSON: {"type":"service_account","project_id":…}'}
+                onChange={(e) => setKey(k.id, { newKey: e.target.value })}
+              />
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 8 }}>
+                <input className="f" value={k.region || ""} placeholder="region — e.g. us-central1 (or global)" onChange={(e) => setKey(k.id, { region: e.target.value })} />
+                <input className="f" value={k.model} placeholder={`model — e.g. ${MODEL_HINT.vertex}`} onChange={(e) => setKey(k.id, { model: e.target.value })} />
+              </div>
+              <p className="meta" style={{ marginTop: 6 }}>
+                Cloud Console → IAM → Service Accounts → create one with role <b>Vertex AI User</b> → Keys → Add key (JSON). The
+                project id is read from the JSON; enable the <b>Vertex AI API</b> on that project.
+              </p>
+            </div>
+          ) : (
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 8 }}>
+              <input className="f" type="password" value={k.newKey || ""} placeholder={k.hasKey ? "•••••••• saved (blank = keep)" : "paste API key"} onChange={(e) => setKey(k.id, { newKey: e.target.value })} />
+              <input className="f" value={k.model} placeholder={`model — e.g. ${MODEL_HINT[k.provider]}`} onChange={(e) => setKey(k.id, { model: e.target.value })} />
+            </div>
+          )}
         </div>
       ))}
       <button className="btn ghost" onClick={addKey}>+ Add key</button>

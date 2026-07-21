@@ -11,6 +11,10 @@ const PRICES: Record<string, [number, number]> = {
   stub: [0, 0],
   "gemini-2.0-flash": [0, 0], // free tier
   "gemini-1.5-flash": [0, 0],
+  // Vertex (paid, but you're on GCP credits) — approximate list prices.
+  "gemini-2.5-pro": [1.25, 10],
+  "gemini-2.5-flash": [0.3, 2.5],
+  "gemini-1.5-pro": [1.25, 5],
   "llama-3.3-70b-versatile": [0, 0], // groq free
   "claude-haiku-4-5": [1, 5],
   "claude-sonnet-4-6": [3, 15],
@@ -73,7 +77,7 @@ async function resolveLanes(feature: Feature): Promise<Lane[]> {
   const lanes: Lane[] = [];
   for (const k of cfg.keys) {
     if (k.provider !== "stub" && k.apiKey) {
-      lanes.push({ provider: k.provider, apiKey: k.apiKey, model: cfg.models[feature] || k.model, baseUrl: k.baseUrl });
+      lanes.push({ provider: k.provider, apiKey: k.apiKey, model: cfg.models[feature] || k.model, baseUrl: k.baseUrl, region: k.region });
     }
   }
   lanes.push({ provider: "stub" as Provider, model: "stub" });

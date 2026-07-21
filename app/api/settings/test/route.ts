@@ -14,6 +14,7 @@ export async function POST(req: Request) {
   let provider = body.provider as Provider;
   let apiKey = body.apiKey as string;
   let model = body.model as string;
+  let region = body.region as string | undefined;
 
   if (!apiKey && body.id) {
     const saved = (await getProviderConfig()).keys.find((k) => k.id === body.id);
@@ -21,14 +22,15 @@ export async function POST(req: Request) {
       provider = saved.provider;
       apiKey = saved.apiKey;
       model = model || saved.model;
+      region = region || saved.region;
     }
   }
   if (!provider || provider === "stub") return NextResponse.json({ ok: true, message: "Offline stub — no key needed." });
-  if (!apiKey) return NextResponse.json({ ok: false, message: "No key to test." });
+  if (!apiKey) return NextResponse.json({ ok: false, message: provider === "vertex" ? "No service-account JSON to test." : "No key to test." });
 
   try {
     const raw = await callProvider(
-      { provider, apiKey, model, baseUrl: OPENAI_COMPAT_BASE[provider] },
+      { provider, apiKey, model, baseUrl: OPENAI_COMPAT_BASE[provider], region },
       { feature: "tutor", system: "Reply with the single word: ok", messages: [{ role: "user", content: "ping" }], maxTokens: 5 }
     );
     return NextResponse.json({ ok: true, message: `Reached ${provider}/${model}. Reply: "${raw.text.slice(0, 40)}"` });

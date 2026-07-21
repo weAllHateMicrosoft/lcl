@@ -54,6 +54,7 @@ export interface StoredKey {
   encryptedKey: string;
   model: string;
   label?: string;
+  region?: string; // vertex only: GCP location
 }
 export interface StoredLLMConfig {
   keys: StoredKey[];
@@ -86,6 +87,7 @@ export interface ResolvedKey {
   model: string;
   baseUrl?: string;
   label?: string;
+  region?: string;
 }
 export interface ResolvedConfig {
   keys: ResolvedKey[];
@@ -97,7 +99,7 @@ export interface ResolvedConfig {
 export async function getProviderConfig(): Promise<ResolvedConfig> {
   const c = await getStoredLLMConfig();
   return {
-    keys: c.keys.map((k) => ({ id: k.id, provider: k.provider, apiKey: decryptSecret(k.encryptedKey), model: k.model, baseUrl: OPENAI_COMPAT_BASE[k.provider], label: k.label })),
+    keys: c.keys.map((k) => ({ id: k.id, provider: k.provider, apiKey: decryptSecret(k.encryptedKey), model: k.model, baseUrl: OPENAI_COMPAT_BASE[k.provider], label: k.label, region: k.region })),
     models: c.models || {},
     prompts: c.prompts || {},
   };
@@ -107,7 +109,7 @@ export async function getProviderConfig(): Promise<ResolvedConfig> {
 export async function getLLMConfigForClient() {
   const c = await getStoredLLMConfig();
   return {
-    keys: c.keys.map((k) => ({ id: k.id, provider: k.provider, model: k.model, label: k.label || "", hasKey: Boolean(k.encryptedKey) })),
+    keys: c.keys.map((k) => ({ id: k.id, provider: k.provider, model: k.model, label: k.label || "", region: k.region || "", hasKey: Boolean(k.encryptedKey) })),
     models: c.models || {},
     prompts: c.prompts || {},
   };
@@ -116,7 +118,7 @@ export async function getLLMConfigForClient() {
 // Save from the admin UI. Each incoming key row carries either a new plaintext
 // apiKey (encrypt it) or just an id (keep the existing encrypted key).
 export async function saveLLMConfig(input: {
-  keys: { id?: string; provider: Provider; model: string; label?: string; apiKey?: string }[];
+  keys: { id?: string; provider: Provider; model: string; label?: string; apiKey?: string; region?: string }[];
   models: Partial<Record<Feature, string>>;
   prompts: Partial<Record<PromptKey, string>>;
 }) {
@@ -129,7 +131,7 @@ export async function saveLLMConfig(input: {
     if (row.apiKey) encryptedKey = encryptSecret(row.apiKey);
     else if (row.id && byId.has(row.id)) encryptedKey = byId.get(row.id)!.encryptedKey;
     if (!encryptedKey) continue; // no key → drop the lane
-    keys.push({ id: row.id && byId.has(row.id) ? row.id : rid(), provider: row.provider, model: row.model || "", label: row.label, encryptedKey });
+    keys.push({ id: row.id && byId.has(row.id) ? row.id : rid(), provider: row.provider, model: row.model || "", label: row.label, region: row.region || undefined, encryptedKey });
   }
   const models: Partial<Record<Feature, string>> = {};
   for (const f of ["tutor", "grade", "generate", "runjava"] as Feature[]) if (input.models?.[f]) models[f] = input.models[f];

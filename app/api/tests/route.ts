@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireRoleApi } from "@/lib/auth";
 import { normalizeQuestions, maxPoints } from "@/lib/curriculum/questions";
-import { syncTestAssignment } from "@/lib/google";
+import { syncTestAssignment, setCourseworkState } from "@/lib/google";
 import type { User } from "@prisma/client";
 
 function originOf(req: Request): string {
@@ -10,6 +10,27 @@ function originOf(req: Request): string {
   const host = h.get("x-forwarded-host") || h.get("host") || "localhost:3000";
   const proto = h.get("x-forwarded-proto") || (host.includes("localhost") ? "http" : "https");
   return `${proto}://${host}`;
+}
+
+// Keep the linked Google Classroom assignment in sync with a test. Called on
+// publish AND on every save of a published test — so teachers never touch a
+// sync button. Best-effort: returns status but never throws.
+async function syncTestToGoogle(req: Request, testId: string): Promise<{ synced: boolean; error?: string } | null> {
+  const test = await prisma.test.findUnique({ where: { id: testId }, include: { class: true } });
+  if (!test?.published || !test.class?.googleCourseId || !test.ownerId) return null;
+  const r = await syncTestAssignment(test.ownerId, test.class.googleCourseId, {
+    title: test.title,
+    description: `Take this test in classOS. (Do not submit here — your marks come from classOS.)`,
+    maxPoints: maxPoints(normalizeQuestions(test.questions as any[])),
+    examUrl: `${originOf(req)}/exam/test/${test.id}`,
+    closeAt: test.closeAt,
+    existingId: test.googleCourseWorkId,
+  });
+  if (r.ok && r.id) {
+    if (r.id !== test.googleCourseWorkId) await prisma.test.update({ where: { id: testId }, data: { googleCourseWorkId: r.id } });
+    return { synced: true };
+  }
+  return { synced: false, error: r.error };
 }
 
 // Test authoring (teacher/admin). GET lists your tests; POST does actions.
@@ -67,32 +88,23 @@ export async function POST(req: Request) {
           requireSeb: b.requireSeb ?? false,
         },
       });
-      return NextResponse.json({ ok: true });
+      // Auto-keep Google in sync when editing an already-published test.
+      const google = await syncTestToGoogle(req, b.id);
+      return NextResponse.json({ ok: true, google });
     }
     case "publish": {
       if (!(await ownsTest(me, b.id))) return NextResponse.json({ error: "not yours" }, { status: 403 });
       const publishing = b.published !== false;
       await prisma.test.update({ where: { id: b.id }, data: { published: publishing } });
 
-      // Auto-sync to Google Classroom if this test's class is linked.
       let google: { synced: boolean; error?: string } | null = null;
       if (publishing) {
-        const test = await prisma.test.findUnique({ where: { id: b.id }, include: { class: true } });
-        if (test?.class?.googleCourseId && test.ownerId) {
-          const r = await syncTestAssignment(test.ownerId, test.class.googleCourseId, {
-            title: test.title,
-            description: `Take this test in classOS. (Do not submit here — your marks come from classOS.)`,
-            maxPoints: maxPoints(normalizeQuestions(test.questions as any[])),
-            examUrl: `${originOf(req)}/exam/test/${test.id}`,
-            closeAt: test.closeAt,
-            existingId: test.googleCourseWorkId,
-          });
-          if (r.ok && r.id) {
-            await prisma.test.update({ where: { id: test.id }, data: { googleCourseWorkId: r.id } });
-            google = { synced: true };
-          } else {
-            google = { synced: false, error: r.error };
-          }
+        google = await syncTestToGoogle(req, b.id);
+      } else {
+        // Unpublished → hide the Google assignment too (set it back to DRAFT).
+        const t = await prisma.test.findUnique({ where: { id: b.id }, include: { class: true } });
+        if (t?.googleCourseWorkId && t.class?.googleCourseId && t.ownerId) {
+          await setCourseworkState(t.ownerId, t.class.googleCourseId, t.googleCourseWorkId, "DRAFT");
         }
       }
       return NextResponse.json({ ok: true, google });

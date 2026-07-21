@@ -142,6 +142,11 @@ export const createAnnouncement = (userId: string, courseId: string, text: strin
 export const createCoursework = (userId: string, courseId: string, work: Record<string, unknown>) =>
   googleFetch(userId, `/courses/${courseId}/courseWork`, { method: "POST", body: JSON.stringify({ workType: "ASSIGNMENT", state: "PUBLISHED", ...work }) });
 
+// Change an assignment's state (PUBLISHED ↔ DRAFT) — used when a test is
+// unpublished in classOS so it hides from students in Google too.
+export const setCourseworkState = (userId: string, courseId: string, courseWorkId: string, state: "PUBLISHED" | "DRAFT") =>
+  googleFetch(userId, `/courses/${courseId}/courseWork/${courseWorkId}?updateMask=state`, { method: "PATCH", body: JSON.stringify({ state }) });
+
 // Push a grade to a Google Classroom assignment for one student (matched by
 // email — the Classroom userId param accepts an email). Sets the grade and
 // returns the submission so the student sees it.

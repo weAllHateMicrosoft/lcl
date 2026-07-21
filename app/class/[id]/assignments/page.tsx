@@ -3,6 +3,7 @@ import { authClass } from "@/lib/classauth";
 import { prisma } from "@/lib/db";
 import { normalizeQuestions, maxPoints } from "@/lib/curriculum/questions";
 import NewTestButton from "@/components/teacher/class/NewTestButton";
+import AssignmentControls from "@/components/teacher/class/AssignmentControls";
 
 export default async function AssignmentsTab({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -37,6 +38,7 @@ export default async function AssignmentsTab({ params }: { params: Promise<{ id:
             </div>
           </div>
           <span style={{ flex: 1 }} />
+          <AssignmentControls id={t.id} published={t.published} />
           <Link className="btn ghost" href={`/tests/${t.id}/edit`}>Edit</Link>
           <Link className="btn" href={`/teacher/test/${t.id}`}>Results ({t._count.submissions})</Link>
         </div>

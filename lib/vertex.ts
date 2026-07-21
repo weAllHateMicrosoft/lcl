@@ -68,3 +68,22 @@ export function vertexModel(model: string): string {
   const m = (model || "gemini-2.5-pro").trim();
   return m.includes("/") ? m : `google/${m}`;
 }
+
+// ─── Express Mode (plain API key, no service account) ────────────────────────
+//
+// Many GCP orgs now block service-account KEY creation by policy
+// (iam.disableServiceAccountKeyCreation — "Secure by Default"). Express Mode
+// sidesteps this entirely: you get a plain API key from the Vertex AI Studio
+// console (no JSON, no crypto), tied to your project/credits. It only speaks
+// Gemini's native generateContent format (no OpenAI-compat surface, no
+// project/region in the URL — the key itself implies the project).
+
+// Whatever the admin pasted into the "Vertex" key field: real SA JSON starts
+// with '{'; an Express key is just a bare string like the other providers'.
+export function looksLikeServiceAccountJson(raw: string): boolean {
+  return raw.trim().startsWith("{");
+}
+
+export function vertexExpressUrl(model: string): string {
+  return `https://aiplatform.googleapis.com/v1/publishers/google/models/${(model || "gemini-2.5-pro").trim()}:generateContent`;
+}

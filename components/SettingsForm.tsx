@@ -93,19 +93,22 @@ export default function SettingsForm({ initial }: { initial: ClientCfg }) {
             <div style={{ marginTop: 8 }}>
               <textarea
                 className="f"
-                rows={3}
-                style={{ fontFamily: "var(--mono)", fontSize: 11 }}
+                rows={2}
+                style={{ fontFamily: "var(--mono)", fontSize: 12 }}
                 value={k.newKey || ""}
-                placeholder={k.hasKey ? '{…} service-account JSON saved (blank = keep)' : 'paste the whole service-account JSON: {"type":"service_account","project_id":…}'}
+                placeholder={k.hasKey ? "•••••••• saved (blank = keep)" : "paste your Vertex AI Express Mode API key"}
                 onChange={(e) => setKey(k.id, { newKey: e.target.value })}
               />
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 8 }}>
-                <input className="f" value={k.region || ""} placeholder="region — e.g. us-central1 (or global)" onChange={(e) => setKey(k.id, { region: e.target.value })} />
+                <input className="f" value={k.region || ""} placeholder="region (ignored for Express keys)" onChange={(e) => setKey(k.id, { region: e.target.value })} />
                 <input className="f" value={k.model} placeholder={`model — e.g. ${MODEL_HINT.vertex}`} onChange={(e) => setKey(k.id, { model: e.target.value })} />
               </div>
               <p className="meta" style={{ marginTop: 6 }}>
-                Cloud Console → IAM → Service Accounts → create one with role <b>Vertex AI User</b> → Keys → Add key (JSON). The
-                project id is read from the JSON; enable the <b>Vertex AI API</b> on that project.
+                Easiest: <b>console.cloud.google.com/vertex-ai</b> → "Express Mode" / API keys → generate a key against your
+                project with credits. No service account, no JSON, no org policy to fight.
+                <br />
+                (If your org allows service-account keys and you'd rather use one, paste the whole JSON here instead — it's
+                auto-detected.)
               </p>
             </div>
           ) : (

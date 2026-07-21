@@ -1,5 +1,5 @@
 import type { CompleteArgs, Lane } from "./types";
-import { parseServiceAccount, vertexAccessToken, vertexBaseUrl, vertexModel } from "../vertex";
+import { parseServiceAccount, vertexAccessToken, vertexBaseUrl, vertexModel, looksLikeServiceAccountJson, vertexExpressUrl } from "../vertex";
 
 // A raw provider call returns text + token usage; the adapter handles JSON
 // parsing, cost, and fallback on top of this.
@@ -31,10 +31,16 @@ export async function callProvider(lane: Lane, args: CompleteArgs): Promise<RawR
   }
 }
 
-// ─── Vertex AI (service-account bearer → reuse the OpenAI-compat client) ──────
+// ─── Vertex AI ────────────────────────────────────────────────────────────────
+// Two auth shapes, auto-detected from what's pasted in the key field:
+//  - a bare string  → Express Mode API key (no service account; the common
+//    path, since many orgs now block SA key creation by policy)
+//  - a '{...}' blob → service-account JSON (OAuth), for orgs that allow it
 
 async function callVertex(lane: Lane, args: CompleteArgs): Promise<RawResult> {
-  if (!lane.apiKey) throw new Error("missing Vertex service-account JSON");
+  if (!lane.apiKey) throw new Error("missing Vertex key");
+  if (!looksLikeServiceAccountJson(lane.apiKey)) return callVertexExpress(lane, args);
+
   const sa = parseServiceAccount(lane.apiKey);
   const token = await vertexAccessToken(sa);
   const region = lane.region || "us-central1";
@@ -43,6 +49,37 @@ async function callVertex(lane: Lane, args: CompleteArgs): Promise<RawResult> {
     { provider: "vertex", apiKey: token, model: vertexModel(lane.model), baseUrl: vertexBaseUrl(sa.project_id, region) },
     args
   );
+}
+
+// Express Mode speaks Gemini's native generateContent shape, not OpenAI's —
+// system/messages and the response are translated by hand here.
+async function callVertexExpress(lane: Lane, args: CompleteArgs): Promise<RawResult> {
+  const body: Record<string, unknown> = {
+    contents: args.messages.map((m) => ({ role: m.role === "assistant" ? "model" : "user", parts: [{ text: m.content }] })),
+    generationConfig: {
+      maxOutputTokens: args.maxTokens ?? 1024,
+      ...(args.json ? { responseMimeType: "application/json" } : {}),
+    },
+  };
+  if (args.system) body.systemInstruction = { parts: [{ text: args.system }] };
+
+  const res = await fetch(vertexExpressUrl(lane.model), {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "x-goog-api-key": lane.apiKey! },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const err = new Error(`vertex express ${res.status}: ${(await res.text()).slice(0, 200)}`);
+    (err as any).status = res.status;
+    throw err;
+  }
+  const data = await res.json();
+  const text = (data.candidates?.[0]?.content?.parts || []).map((p: any) => p.text || "").join("");
+  return {
+    text,
+    input: data.usageMetadata?.promptTokenCount ?? 0,
+    output: data.usageMetadata?.candidatesTokenCount ?? 0,
+  };
 }
 
 // ─── OpenAI-compatible (Groq / OpenRouter / Gemini-compat) ───────────────────

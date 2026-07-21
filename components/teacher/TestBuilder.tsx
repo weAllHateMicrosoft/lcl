@@ -115,7 +115,7 @@ export default function TestBuilder({ id }: { id: string }) {
   return (
     <div className="main" style={{ maxWidth: 820 }}>
       <div className="crumb">
-        <Link href="/tests" style={{ textDecoration: "underline dotted" }}>TESTS</Link> · BUILD
+        <Link href={classId ? `/class/${classId}/assignments` : "/class"} style={{ textDecoration: "underline dotted" }}>← ASSIGNMENTS</Link> · BUILD
       </div>
       <div className="edbar" style={{ marginTop: 8 }}>
         <input className="f" style={{ flex: 1, fontFamily: "var(--serif)", fontSize: 20, fontWeight: 700 }} value={title} onChange={(e) => edit(() => setTitle(e.target.value))} placeholder="Test title" />

@@ -4,11 +4,14 @@ import { currentUser } from "@/lib/auth";
 import ProfileForm from "@/components/account/ProfileForm";
 import PasswordForm from "@/components/PasswordForm";
 import TotpSetup from "@/components/account/TotpSetup";
+import AskTeacherToggle from "@/components/teacher/AskTeacherToggle";
+import { getSetting } from "@/lib/settings";
 
 export default async function AccountPage() {
   const me = await currentUser();
   if (!me) redirect("/login");
   if (!me.passwordHash) redirect("/lessons");
+  const prefs = await getSetting<{ askTeacher?: boolean }>(`prefs:${me.id}`, {});
 
   return (
     <div className="main" style={{ maxWidth: 720 }}>
@@ -25,6 +28,13 @@ export default async function AccountPage() {
         <h2>Change password</h2>
         <PasswordForm />
       </div>
+
+      {me.role !== "STUDENT" && (
+        <div className="panel">
+          <h2>Teaching preferences</h2>
+          <AskTeacherToggle initial={prefs.askTeacher === true} />
+        </div>
+      )}
 
       {me.role !== "STUDENT" && (
         <div className="panel">

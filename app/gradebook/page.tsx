@@ -6,6 +6,8 @@ import { currentUser } from "@/lib/auth";
 export default async function GradebookPage() {
   const me = await currentUser();
   if (!me) redirect("/join");
+  // Teachers use each class's Gradebook tab now.
+  if (me.role !== "STUDENT") redirect("/class");
 
   // ─── Student: my grades (released tests + mastered lessons) ───
   if (me.role === "STUDENT") {

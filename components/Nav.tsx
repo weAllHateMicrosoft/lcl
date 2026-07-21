@@ -36,31 +36,20 @@ export default function Nav({ me, cost, unread = 0 }: { me: MiniUser | null; cos
             <span style={{ color: "#e9e4d8", fontFamily: "var(--sans)", fontWeight: 600, fontSize: 13 }}>{me.name}</span>
           </div>
           <nav className="viewswitch">
-            <Link href="/lessons" className={on("/lessons")}>
-              {me.role === "STUDENT" ? "My lessons" : "Student view"}
-            </Link>
-            <Link href="/tests" className={on("/tests")}>
-              Tests
-            </Link>
-            <Link href="/gradebook" className={on("/gradebook")}>
-              Grades
-            </Link>
-            {(me.role === "TEACHER" || me.role === "ADMIN") && (
-              <Link href="/class" className={on("/class") || on("/teacher")}>
-                Classes
-              </Link>
+            {me.role === "STUDENT" ? (
+              <>
+                <Link href="/lessons" className={on("/lessons")}>My lessons</Link>
+                <Link href="/tests" className={on("/tests")}>My tests</Link>
+                <Link href="/gradebook" className={on("/gradebook")}>My grades</Link>
+              </>
+            ) : (
+              <Link href="/class" className={on("/class") || on("/teacher") || on("/tests") || on("/gradebook")}>Classes</Link>
             )}
             {me.role === "ADMIN" && (
               <>
-                <Link href="/admin/editor" className={on("/admin/editor")}>
-                  Editor
-                </Link>
-                <Link href="/admin/usage" className={on("/admin/usage")}>
-                  Usage
-                </Link>
-                <Link href="/admin/settings" className={on("/admin/settings")}>
-                  Settings
-                </Link>
+                <Link href="/admin/editor" className={on("/admin/editor")}>Editor</Link>
+                <Link href="/admin/usage" className={on("/admin/usage")}>Usage</Link>
+                <Link href="/admin/settings" className={on("/admin/settings")}>Settings</Link>
               </>
             )}
           </nav>

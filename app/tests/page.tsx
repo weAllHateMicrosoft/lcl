@@ -7,6 +7,8 @@ import TestList from "@/components/teacher/TestList";
 export default async function TestsPage() {
   const me = await currentUser();
   if (!me) redirect("/join");
+  // Teachers manage tests inside each class's Assignments tab now.
+  if (me.role !== "STUDENT") redirect("/class");
 
   // ─── Student view: assigned tests + their status ───
   if (me.role === "STUDENT") {

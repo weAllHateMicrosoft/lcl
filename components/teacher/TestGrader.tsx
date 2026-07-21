@@ -19,7 +19,7 @@ function modelAnswer(q: any): string {
 type QResult = { id: string; type: string; awarded: number; max: number; auto: boolean; correct?: boolean; note?: string };
 type Sub = { id: string; name: string; answers: Record<string, unknown>; results: QResult[] | null; autoScore: number; maxScore: number; finalScore: number | null; status: string };
 
-export default function TestGrader({ id }: { id: string }) {
+export default function TestGrader({ id, classId }: { id: string; classId?: string | null }) {
   const [title, setTitle] = useState("");
   const [questions, setQuestions] = useState<Question[]>([]);
   const [subs, setSubs] = useState<Sub[]>([]);
@@ -51,7 +51,7 @@ export default function TestGrader({ id }: { id: string }) {
   return (
     <>
       <div className="crumb">
-        <Link href="/tests" style={{ textDecoration: "underline dotted" }}>TESTS</Link> · RESULTS
+        <Link href={classId ? `/class/${classId}/assignments` : "/class"} style={{ textDecoration: "underline dotted" }}>← ASSIGNMENTS</Link> · RESULTS
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 6, flexWrap: "wrap" }}>
         <h1 className="title" style={{ margin: 0 }}>{title}</h1>

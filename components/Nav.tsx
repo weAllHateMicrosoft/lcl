@@ -48,6 +48,7 @@ export default function Nav({ me, cost, unread = 0 }: { me: MiniUser | null; cos
             {me.role === "ADMIN" && (
               <>
                 <Link href="/admin/editor" className={on("/admin/editor")}>Editor</Link>
+                <Link href="/admin/skills" className={on("/admin/skills")}>Skills</Link>
                 <Link href="/admin/usage" className={on("/admin/usage")}>Usage</Link>
                 <Link href="/admin/settings" className={on("/admin/settings")}>Settings</Link>
               </>

@@ -59,6 +59,7 @@ model Lesson {
 
   attempts  Attempt[]
   versions  LessonVersion[]
+  skills    Skill[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -281,7 +282,12 @@ model Skill {
   id         String  @id @default(cuid())
   code       String? // teacher-facing, optional (e.g. "2.3b")
   statement  String // "trace a recursive call"
-  unit       String? // free-text grouping for rollup; teacher-owned
+  // Where the skill lives. For the coarse v1 (~one skill per lesson objective)
+  // skills are lesson-scoped, which gives a clean skill→lesson→chapter rollup.
+  // A future cross-lesson skill leaves lessonId null and groups by `unit`.
+  lesson     Lesson? @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  lessonId   String?
+  unit       String? // free-text grouping for rollup when not lesson-scoped
   difficulty Int? // 1..5 — a hint, not a law
   origin     String  @default("ai") // "ai" = suggested | "teacher" = curated/confirmed
   confidence Float   @default(0) // AI's confidence this skill is real/distinct
@@ -290,6 +296,8 @@ model Skill {
   evidence       Evidence[]
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
+
+  @@index([lessonId])
 }
 
 // Many-to-many: a question can exercise several skills, a skill many questions.

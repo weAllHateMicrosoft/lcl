@@ -37,19 +37,22 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     },
   });
 
-  // Analytics substrate (best-effort): the submission summary + item-level answers.
-  logEvent({ type: EVENT.TEST_SUBMIT, userId: me.id, classId: test.classId, testId: id, autoScore, maxScore, needsManual });
-  for (const r of results) {
-    logEvent({
-      type: EVENT.QUIZ_ANSWER,
-      userId: me.id,
-      classId: test.classId,
-      testId: id,
-      questionId: r.id,
-      correct: r.correct ?? r.awarded >= r.max,
-      chosen: (answers || {})[r.id] ?? null,
-      source: "test",
-    });
+  // Analytics substrate (best-effort): the submission summary + item-level
+  // answers. Learners only — staff never pollute the data.
+  if (me.role === "STUDENT") {
+    logEvent({ type: EVENT.TEST_SUBMIT, userId: me.id, classId: test.classId, testId: id, autoScore, maxScore, needsManual });
+    for (const r of results) {
+      logEvent({
+        type: EVENT.QUIZ_ANSWER,
+        userId: me.id,
+        classId: test.classId,
+        testId: id,
+        questionId: r.id,
+        correct: r.correct ?? r.awarded >= r.max,
+        chosen: (answers || {})[r.id] ?? null,
+        source: "test",
+      });
+    }
   }
 
   return NextResponse.json({ ok: true, autoScore, maxScore, needsManual });

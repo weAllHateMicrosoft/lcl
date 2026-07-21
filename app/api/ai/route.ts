@@ -59,7 +59,8 @@ export async function POST(req: Request) {
       { userId: me.id }
     );
     // Analytics substrate: keep the actual exchange, not just the token bill.
-    logEvent({ type: EVENT.TUTOR_MESSAGE, userId: me.id, classId: me.classId, lessonId: lesson.id, lessonCode, question: body.message, reply: r.text });
+    // Learners only — staff (you) never pollute the data.
+    if (me.role === "STUDENT") logEvent({ type: EVENT.TUTOR_MESSAGE, userId: me.id, classId: me.classId, lessonId: lesson.id, lessonCode, question: body.message, reply: r.text });
     return NextResponse.json({ text: r.text, meta: metaLine(r) });
   }
 

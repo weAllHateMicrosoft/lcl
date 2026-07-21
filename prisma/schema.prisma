@@ -268,6 +268,63 @@ model AiCall {
   @@index([createdAt])
 }
 
+// ─── Competency model (STUDENT-MODEL.md §3) ─────────────────────────────────
+//
+// PROVISIONAL by design. Skills are *hypotheses* the AI infers from the
+// teacher's real questions/lessons ("revealed curriculum") — never a taxonomy
+// handed down as truth. The teacher curates (confirm/rename/merge/split), which
+// flips origin "ai" → "teacher". Nothing here is mandatory: an untagged question
+// still works, it just contributes no skill-level evidence. The system degrades
+// gracefully toward the old lesson-level behaviour.
+
+model Skill {
+  id         String  @id @default(cuid())
+  code       String? // teacher-facing, optional (e.g. "2.3b")
+  statement  String // "trace a recursive call"
+  unit       String? // free-text grouping for rollup; teacher-owned
+  difficulty Int? // 1..5 — a hint, not a law
+  origin     String  @default("ai") // "ai" = suggested | "teacher" = curated/confirmed
+  confidence Float   @default(0) // AI's confidence this skill is real/distinct
+
+  questionSkills QuestionSkill[]
+  evidence       Evidence[]
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+// Many-to-many: a question can exercise several skills, a skill many questions.
+// questionId is the stable id inside a Lesson.masteryQuiz / Test.questions JSON
+// array (questions don't have their own table), so this is a soft link, not a FK.
+model QuestionSkill {
+  id         String @id @default(cuid())
+  questionId String
+  skill      Skill  @relation(fields: [skillId], references: [id], onDelete: Cascade)
+  skillId    String
+  weight     Float  @default(1)
+  origin     String @default("ai") // ai-tagged vs teacher-confirmed
+
+  @@unique([questionId, skillId])
+  @@index([questionId])
+  @@index([skillId])
+}
+
+// The evidence ledger — a durable projection of quiz.answer events, one row per
+// answered question per skill it tests. This is what the mastery estimator reads.
+model Evidence {
+  id         String   @id @default(cuid())
+  userId     String
+  skill      Skill    @relation(fields: [skillId], references: [id], onDelete: Cascade)
+  skillId    String
+  correct    Boolean
+  difficulty Int?
+  weight     Float    @default(1)
+  source     String // "practice" | "summative" | "test" | "tutor"
+  at         DateTime @default(now())
+
+  @@index([userId, skillId, at])
+  @@index([skillId, at])
+}
+
 // ─── Event log (the analytics substrate; see STUDENT-MODEL.md §2) ────────────
 //
 // Append-only, best-effort, never used to *run* the app — purely for later

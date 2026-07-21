@@ -54,7 +54,8 @@ export async function POST(req: Request) {
   // Analytics substrate: item-level answers — the load-bearing signal. Records
   // which distractor was chosen (the "why" behind a wrong answer). skillIds are
   // added later once question→skill tagging exists; forward-compatible now.
-  for (const r of results) {
+  // Learners only — staff previews never pollute the data.
+  if (me.role === "STUDENT") for (const r of results) {
     logEvent({
       type: EVENT.QUIZ_ANSWER,
       userId: me.id,

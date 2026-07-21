@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { currentUser } from "@/lib/auth";
 import { getSetting } from "@/lib/settings";
+import { logEvent, EVENT } from "@/lib/events";
 import LessonRenderer from "@/components/LessonRenderer";
 import LessonWorkspace from "@/components/LessonWorkspace";
 import StudentTools from "@/components/student/StudentTools";
@@ -22,6 +23,10 @@ export default async function LessonPage({
   if (!me) redirect("/join");
   const lesson = await prisma.lesson.findUnique({ where: { code }, include: { chapter: true } });
   if (!lesson) notFound();
+
+  // Analytics substrate (best-effort): students opening a lesson. Staff previews
+  // are excluded so the design data reflects real learners only.
+  if (me.role === "STUDENT") logEvent({ type: EVENT.LESSON_VIEW, userId: me.id, classId: me.classId, lessonId: lesson.id, code });
 
   const progress = await prisma.progress.findUnique({
     where: { userId_lessonId: { userId: me.id, lessonId: lesson.id } },

@@ -268,6 +268,28 @@ model AiCall {
   @@index([createdAt])
 }
 
+// ─── Event log (the analytics substrate; see STUDENT-MODEL.md §2) ────────────
+//
+// Append-only, best-effort, never used to *run* the app — purely for later
+// mass-analysis and for deriving the student model (evidence ledger, mastery).
+// Operational tables (Attempt/Progress/TestSubmission) keep doing their job;
+// this is a parallel, lossy-tolerant stream. Writes must never block a request.
+//
+//   type    — namespaced: "quiz.answer", "tutor.message", "lesson.view", ...
+//   payload — versioned JSON; always carries { v: <n>, ... }.
+model Event {
+  id      String   @id @default(cuid())
+  at      DateTime @default(now())
+  userId  String? // null = system / anonymous
+  classId String? // denormalised context for cheap slicing
+  type    String
+  payload Json
+
+  @@index([type, at])
+  @@index([userId, at])
+  @@index([classId, at])
+}
+
 // ─── Settings (DB-backed config — swap providers without redeploy) ───────────
 
 model Setting {

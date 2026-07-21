@@ -1,5 +1,6 @@
 import "server-only";
 import { prisma } from "./db";
+import { logEvent, EVENT } from "./events";
 import type { AttemptKind } from "./roles";
 
 /**
@@ -59,6 +60,11 @@ export async function recordAttempt(input: {
     create: { userId, lessonId, status, readiness, flag },
     update: { status, readiness, flag },
   });
+
+  // Analytics substrate: record derived-state transitions (best-effort).
+  if (status !== prevStatus || flag !== (current?.flag ?? null)) {
+    logEvent({ type: EVENT.MASTERY_CHANGE, userId, lessonId, from: prevStatus, to: status, readiness, flag, via: kind });
+  }
 
   return { status, readiness, flag };
 }

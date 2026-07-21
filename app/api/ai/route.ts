@@ -5,6 +5,7 @@ import { complete } from "@/lib/llm";
 import { DEFAULT_PROMPTS, renderPrompt } from "@/lib/llm/prompts";
 import { getProviderConfig } from "@/lib/settings";
 import { performanceSummary } from "@/lib/progress";
+import { logEvent, EVENT } from "@/lib/events";
 import { normalize } from "@/lib/text";
 import { sanitizeInline } from "@/lib/sanitize";
 import { rateLimit } from "@/lib/ratelimit";
@@ -57,6 +58,8 @@ export async function POST(req: Request) {
       },
       { userId: me.id }
     );
+    // Analytics substrate: keep the actual exchange, not just the token bill.
+    logEvent({ type: EVENT.TUTOR_MESSAGE, userId: me.id, classId: me.classId, lessonId: lesson.id, lessonCode, question: body.message, reply: r.text });
     return NextResponse.json({ text: r.text, meta: metaLine(r) });
   }
 

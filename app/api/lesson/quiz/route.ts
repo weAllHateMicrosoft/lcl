@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { currentUser } from "@/lib/auth";
 import { gradeSubmission } from "@/lib/grading";
 import { recordAttempt } from "@/lib/progress";
+import { logEvent, EVENT } from "@/lib/events";
 import { stripHtml } from "@/lib/sanitize";
 import type { Block } from "@/lib/curriculum/blocks";
 
@@ -49,6 +50,22 @@ export async function POST(req: Request) {
     score,
     detail: { questions: detailQuestions, block: title(block) },
   });
+
+  // Analytics substrate: item-level answers — the load-bearing signal. Records
+  // which distractor was chosen (the "why" behind a wrong answer). skillIds are
+  // added later once question→skill tagging exists; forward-compatible now.
+  for (const r of results) {
+    logEvent({
+      type: EVENT.QUIZ_ANSWER,
+      userId: me.id,
+      classId: me.classId,
+      lessonId: lesson.id,
+      questionId: r.id,
+      correct: r.correct ?? r.awarded >= r.max,
+      chosen: (answers || {})[r.id] ?? null,
+      source: "practice",
+    });
+  }
 
   return NextResponse.json({ results, awarded, max });
 }

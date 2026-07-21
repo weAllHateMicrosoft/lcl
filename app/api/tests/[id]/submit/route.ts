@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { currentUser } from "@/lib/auth";
 import { normalizeQuestions } from "@/lib/curriculum/questions";
 import { gradeSubmission } from "@/lib/grading";
+import { logEvent, EVENT } from "@/lib/events";
 
 // Student submits answers. Auto-gradable questions (mcq/tf/short/code) are
 // graded now; long answers wait for the teacher. One submission per student.
@@ -35,6 +36,21 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       status: needsManual ? "submitted" : "graded",
     },
   });
+
+  // Analytics substrate (best-effort): the submission summary + item-level answers.
+  logEvent({ type: EVENT.TEST_SUBMIT, userId: me.id, classId: test.classId, testId: id, autoScore, maxScore, needsManual });
+  for (const r of results) {
+    logEvent({
+      type: EVENT.QUIZ_ANSWER,
+      userId: me.id,
+      classId: test.classId,
+      testId: id,
+      questionId: r.id,
+      correct: r.correct ?? r.awarded >= r.max,
+      chosen: (answers || {})[r.id] ?? null,
+      source: "test",
+    });
+  }
 
   return NextResponse.json({ ok: true, autoScore, maxScore, needsManual });
 }

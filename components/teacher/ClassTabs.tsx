@@ -8,6 +8,7 @@ const TABS = [
   { seg: "students", label: "Students" },
   { seg: "assignments", label: "Assignments" },
   { seg: "gradebook", label: "Gradebook" },
+  { seg: "mastery", label: "Mastery" },
   { seg: "stream", label: "Stream" },
   { seg: "settings", label: "Settings" },
 ];

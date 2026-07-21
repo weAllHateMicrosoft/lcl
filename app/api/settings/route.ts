@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireRoleApi } from "@/lib/auth";
 import { saveLLMConfig } from "@/lib/settings";
+import { saveMasteryConfig } from "@/lib/mastery";
 import { saveSmtpConfig, sendMail } from "@/lib/email";
 
 // Save settings (admin only): LLM config (keys/models/prompts) and/or SMTP.
@@ -8,6 +9,11 @@ export async function POST(req: Request) {
   const gate = await requireRoleApi("ADMIN");
   if (gate instanceof NextResponse) return gate;
   const body = await req.json();
+
+  if (body.mastery) {
+    await saveMasteryConfig(body.mastery);
+    if (!body.smtp && !body.keys) return NextResponse.json({ ok: true });
+  }
 
   if (body.smtp) {
     await saveSmtpConfig(body.smtp);

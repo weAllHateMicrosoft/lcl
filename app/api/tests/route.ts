@@ -50,7 +50,7 @@ export async function POST(req: Request) {
 
   switch (b.action) {
     case "create": {
-      const t = await prisma.test.create({ data: { title: b.title || "Untitled test", ownerId: me.id, questions: [] } });
+      const t = await prisma.test.create({ data: { title: b.title || "Untitled test", ownerId: me.id, questions: [], classId: b.classId || null } });
       return NextResponse.json({ ok: true, id: t.id });
     }
     case "save": {

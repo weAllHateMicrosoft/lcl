@@ -32,6 +32,30 @@ export function redirectUriFor(req: Request): string {
   return process.env.GOOGLE_REDIRECT_URI_OVERRIDE || `${proto}://${host}/api/auth/google/callback`;
 }
 
+// Student sign-in only needs identity — no Classroom scopes, no offline/refresh.
+export function studentConsentUrl(redirectUri: string, state: string): string {
+  const p = new URLSearchParams({
+    client_id: process.env.GOOGLE_CLIENT_ID || "",
+    redirect_uri: redirectUri,
+    access_type: "online",
+    response_type: "code",
+    prompt: "select_account",
+    scope: "openid email profile",
+    state,
+  });
+  return `https://accounts.google.com/o/oauth2/v2/auth?${p.toString()}`;
+}
+
+// Email of the Google account behind an access token.
+export async function googleEmailOf(accessToken: string): Promise<string | null> {
+  try {
+    const r = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", { headers: { Authorization: `Bearer ${accessToken}` } });
+    return (await r.json()).email?.toLowerCase() || null;
+  } catch {
+    return null;
+  }
+}
+
 export function consentUrl(redirectUri: string, state: string): string {
   const p = new URLSearchParams({
     client_id: process.env.GOOGLE_CLIENT_ID || "",

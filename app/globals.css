@@ -501,6 +501,12 @@ td.name { font-weight: 700; }
 .authalt { margin-top: 16px; padding-top: 14px; border-top: 1px dashed var(--line); font-size: 13.5px; color: var(--muted); }
 .authalt a { color: var(--accent); font-weight: 600; }
 .codein { font-family: var(--mono); font-size: 18px; letter-spacing: .25em; text-transform: uppercase; text-align: center; }
+.gsignin { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; padding: 11px; border: 1.5px solid var(--line); border-radius: 9px; background: #fff; color: #3c4043; font-weight: 600; font-size: 14px; text-decoration: none; }
+.gsignin:hover { background: #f7f8fa; border-color: var(--muted); }
+:root[data-theme="dark"] .gsignin { background: #fff; }
+.gsignin .gicon { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 99px; background: conic-gradient(from -45deg, #ea4335 0 25%, #fbbc05 0 50%, #34a853 0 75%, #4285f4 0); color: #fff; font-weight: 800; font-size: 13px; }
+.orsep { display: flex; align-items: center; gap: 10px; margin: 14px 0; color: var(--muted); font-size: 12px; }
+.orsep::before, .orsep::after { content: ""; flex: 1; height: 1px; background: var(--line); }
 
 /* ─── Settings / forms ─── */
 label.field { display: block; margin: 14px 0; }

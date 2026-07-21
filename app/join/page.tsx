@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { currentUser } from "@/lib/auth";
 import JoinForm from "@/components/JoinForm";
+import GoogleSignInButton from "@/components/GoogleSignInButton";
 
 export default async function JoinPage() {
   const me = await currentUser();
@@ -17,6 +18,8 @@ export default async function JoinPage() {
         <p style={{ color: "var(--muted)", marginBottom: 14, fontSize: 14 }}>
           First time here: enter your class code, your name, your real email, and choose a password. Already joined? <b>Sign in instead.</b>
         </p>
+        <GoogleSignInButton label="Continue with Google" />
+        <div className="orsep"><span>or use a class code</span></div>
         <JoinForm />
         <div className="authalt">
           Already have an account? <Link href="/login">Sign in →</Link>

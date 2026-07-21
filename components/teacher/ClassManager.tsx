@@ -98,6 +98,27 @@ function ClassCard({ c, googleConnected, onChange }: { c: ClassInfo; googleConne
   const [copied, setCopied] = useState(false);
   const [picker, setPicker] = useState<null | { id: string; name: string; section?: string }[]>(null);
   const [gLoading, setGLoading] = useState(false);
+  const [announce, setAnnounce] = useState<string | null>(null);
+
+  async function importRoster() {
+    if (!confirm("Import all students from the linked Google class? New ones get pending accounts they activate by signing up with their email.")) return;
+    setGLoading(true);
+    const d = await gAction({ action: "importRoster", classId: c.id });
+    setGLoading(false);
+    if (d.error) return alert(`Import failed: ${d.error}`);
+    alert(`Imported ✓ — ${d.created} new, ${d.linked} linked${d.skipped ? `, ${d.skipped} skipped (no email/staff)` : ""}.`);
+    onChange();
+  }
+  async function sendAnnounce() {
+    const text = (announce || "").trim();
+    if (!text) return;
+    const d = await gAction({ action: "announce", classId: c.id, text });
+    setAnnounce(null);
+    if (d.error) return alert(d.error);
+    const g = d.google ? (d.google.posted ? " + Google Classroom stream" : ` (Google failed: ${d.google.error})`) : "";
+    alert(`Posted to ${d.sent} students' inbox${g}.`);
+    onChange();
+  }
 
   async function openPicker() {
     setGLoading(true);
@@ -170,16 +191,28 @@ function ClassCard({ c, googleConnected, onChange }: { c: ClassInfo; googleConne
         >
           {copied ? "copied!" : code}
         </code>
+        <button className="tbtn2" onClick={() => setAnnounce(announce === null ? "" : null)} title="Post an announcement">📣</button>
         <button className="tbtn2" onClick={regen} title="New join code">↻</button>
         <button className="tbtn2 danger" onClick={del} title="Delete class">🗑</button>
       </div>
+
+      {announce !== null && (
+        <div className="glink" style={{ flexDirection: "column", alignItems: "stretch" }}>
+          <textarea className="f" rows={2} value={announce} autoFocus placeholder="Announcement — goes to every student's inbox, and to the Google Classroom stream if linked…" onChange={(e) => setAnnounce(e.target.value)} />
+          <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
+            <button className="btn green" style={{ padding: "6px 12px" }} onClick={sendAnnounce} disabled={!announce.trim()}>Post</button>
+            <button className="tbtn2" onClick={() => setAnnounce(null)}>Cancel</button>
+          </div>
+        </div>
+      )}
 
       {googleConnected && (
         <div className="glink">
           {c.googleCourseId ? (
             <>
-              <span>🎓 Linked to <b>{c.googleCourseName || "a Google course"}</b> — published tests sync here as assignments.</span>
+              <span>🎓 Linked to <b>{c.googleCourseName || "a Google course"}</b> — tests sync as assignments; grades push back.</span>
               <span style={{ flex: 1 }} />
+              <button className="tbtn2" onClick={importRoster} disabled={gLoading} title="Pull the Google roster into this class">{gLoading ? "…" : "Import students"}</button>
               <button className="tbtn2" onClick={unlink}>Unlink</button>
             </>
           ) : picker ? (

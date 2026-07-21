@@ -26,13 +26,25 @@ export async function POST(req: Request) {
   const cls = await prisma.class.findUnique({ where: { joinCode: cleanCode } });
   if (!cls) return NextResponse.json({ error: "No class with that code — check with your teacher." }, { status: 404 });
 
+  const passwordHash = hashPassword(password);
+
   const taken = await prisma.user.findUnique({ where: { email: cleanEmail } });
-  if (taken) return NextResponse.json({ error: "That email already has an account — sign in instead." }, { status: 409 });
+  if (taken) {
+    // A roster-imported account (no password yet) → activate it and sign in.
+    // The email came from Google's roster, so it's already trusted (no code needed).
+    if (taken.role === "STUDENT" && !taken.passwordHash) {
+      const student = await prisma.user.update({
+        where: { id: taken.id },
+        data: { passwordHash, name: taken.name || cleanName, classId: taken.classId ?? cls.id, emailVerifiedAt: taken.emailVerifiedAt ?? new Date() },
+      });
+      await startSession(student.id);
+      return NextResponse.json({ ok: true, className: cls.name, activated: true });
+    }
+    return NextResponse.json({ error: "That email already has an account — sign in instead." }, { status: 409 });
+  }
 
   const size = await prisma.user.count({ where: { classId: cls.id } });
   if (size >= MAX_CLASS_SIZE) return NextResponse.json({ error: "This class is full — tell your teacher." }, { status: 403 });
-
-  const passwordHash = hashPassword(password);
 
   if (await isEmailConfigured()) {
     const codeStr = await issueCode(cleanEmail, "join", { classId: cls.id, name: cleanName, passwordHash });

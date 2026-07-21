@@ -13,7 +13,8 @@ export const GOOGLE_SCOPES = [
   "openid",
   "email",
   "https://www.googleapis.com/auth/classroom.courses.readonly", // list the teacher's courses
-  "https://www.googleapis.com/auth/classroom.rosters.readonly", // match students
+  "https://www.googleapis.com/auth/classroom.rosters.readonly", // list students
+  "https://www.googleapis.com/auth/classroom.profile.emails", // read student emails (to import/match accounts)
   "https://www.googleapis.com/auth/classroom.announcements", // post to the stream
   "https://www.googleapis.com/auth/classroom.coursework.students", // create assignments + push grades
 ];
@@ -140,6 +141,32 @@ export const createAnnouncement = (userId: string, courseId: string, text: strin
   googleFetch(userId, `/courses/${courseId}/announcements`, { method: "POST", body: JSON.stringify({ text, state: "PUBLISHED" }) });
 export const createCoursework = (userId: string, courseId: string, work: Record<string, unknown>) =>
   googleFetch(userId, `/courses/${courseId}/courseWork`, { method: "POST", body: JSON.stringify({ workType: "ASSIGNMENT", state: "PUBLISHED", ...work }) });
+
+// Push a grade to a Google Classroom assignment for one student (matched by
+// email — the Classroom userId param accepts an email). Sets the grade and
+// returns the submission so the student sees it.
+export async function pushGrade(
+  userId: string,
+  courseId: string,
+  courseWorkId: string,
+  studentEmail: string,
+  grade: number
+): Promise<{ ok: boolean; error?: string }> {
+  const base = `/courses/${courseId}/courseWork/${courseWorkId}/studentSubmissions`;
+  const list = await googleFetch(userId, `${base}?userId=${encodeURIComponent(studentEmail)}`);
+  if (!list.ok) return { ok: false, error: list.data?.error?.message || `list ${list.status}` };
+  const sub = (list.data.studentSubmissions || [])[0];
+  if (!sub) return { ok: false, error: "no matching Google submission (is the student in the Google class?)" };
+
+  const patch = await googleFetch(userId, `${base}/${sub.id}?updateMask=draftGrade,assignedGrade`, {
+    method: "PATCH",
+    body: JSON.stringify({ draftGrade: grade, assignedGrade: grade }),
+  });
+  if (!patch.ok) return { ok: false, error: patch.data?.error?.message || `patch ${patch.status}` };
+  // Return it so the grade is visible to the student (ignore failure — it may already be returned).
+  await googleFetch(userId, `${base}/${sub.id}:return`, { method: "POST", body: "{}" });
+  return { ok: true };
+}
 
 // Create or update a Google Classroom assignment that links to a classOS test.
 // closeAt → the assignment's dueDate/dueTime (shows on students' Google Calendar).

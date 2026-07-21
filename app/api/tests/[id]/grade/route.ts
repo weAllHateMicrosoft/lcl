@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { requireRoleApi } from "@/lib/auth";
 import { normalizeQuestions } from "@/lib/curriculum/questions";
 import { complete } from "@/lib/llm";
+import { pushGrade } from "@/lib/google";
 import type { User } from "@prisma/client";
 
 async function ownsTest(me: User, testId: string) {
@@ -76,9 +77,18 @@ Max marks: ${b.max}. Be fair and consistent. Keep feedback short so the JSON is 
   // Save marks: b.results is the full QResult[] with teacher-set `awarded`.
   const results = b.results as { awarded: number }[];
   const finalScore = results.reduce((s, x) => s + (Number(x.awarded) || 0), 0);
-  await prisma.testSubmission.update({
+  const sub = await prisma.testSubmission.update({
     where: { id: b.submissionId },
     data: { results: results as any, finalScore, status: "graded", gradedAt: new Date() },
+    include: { user: true },
   });
-  return NextResponse.json({ ok: true, finalScore });
+
+  // Push the grade to Google Classroom if this test is synced.
+  let google: { pushed: boolean; error?: string } | null = null;
+  const test = await prisma.test.findUnique({ where: { id }, include: { class: true } });
+  if (test?.googleCourseWorkId && test.class?.googleCourseId && test.ownerId && sub.user.email) {
+    const r = await pushGrade(test.ownerId, test.class.googleCourseId, test.googleCourseWorkId, sub.user.email, finalScore);
+    google = r.ok ? { pushed: true } : { pushed: false, error: r.error };
+  }
+  return NextResponse.json({ ok: true, finalScore, google });
 }

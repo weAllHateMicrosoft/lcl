@@ -92,6 +92,8 @@ model User {
   passwordHash String? // scrypt "salt:hash"
   emailVerifiedAt DateTime?
   totpSecret   String? // encrypted TOTP secret (Google Authenticator) — admin/staff 2FA
+  googleRefreshToken String? // encrypted — a teacher's Google Classroom connection
+  googleEmail  String? // which Google account they connected
   failedLogins Int       @default(0)
   lockedAt     DateTime? // set after repeated failures; admin can unlock
   role         String    @default("STUDENT")
@@ -177,6 +179,8 @@ model Class {
   id        String   @id @default(cuid())
   name      String
   joinCode  String   @unique // what students type to join
+  googleCourseId   String? // linked Google Classroom course
+  googleCourseName String?
   teacher   User?    @relation("ClassTeacher", fields: [teacherId], references: [id], onDelete: SetNull)
   teacherId String?
   students  User[]   @relation("ClassStudents")

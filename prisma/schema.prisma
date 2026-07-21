@@ -333,6 +333,26 @@ model Evidence {
   @@index([skillId, at])
 }
 
+// ─── AI oversight (STUDENT-MODEL.md §4.2 — the per-student brief) ────────────
+//
+// One row per AI read of one student: the parsed JSON brief (summary, trend,
+// alert, gaps w/ evidence, suggested actions, a warm student-facing note).
+// History is kept (it's a log); the newest row is what the UI shows. Staleness
+// is judged against the student's newest Event, so a fresh brief is only a
+// click away and an old one is never silently passed off as current.
+model StudentInsight {
+  id        String   @id @default(cuid())
+  userId    String
+  classId   String?
+  payload   Json // { v, summary, trend, alert, strengths, gaps, actions, studentMessage }
+  provider  String   @default("")
+  model     String   @default("")
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([classId, createdAt])
+}
+
 // ─── Event log (the analytics substrate; see STUDENT-MODEL.md §2) ────────────
 //
 // Append-only, best-effort, never used to *run* the app — purely for later

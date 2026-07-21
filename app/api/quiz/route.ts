@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { currentUser } from "@/lib/auth";
 import { recordAttempt } from "@/lib/progress";
+import { logEvent, EVENT } from "@/lib/events";
 import { normalizeQuestions, stripAnswers, type Question } from "@/lib/curriculum/questions";
 import { gradeSubmission } from "@/lib/grading";
 
@@ -66,6 +67,23 @@ export async function POST(req: Request) {
     score,
     detail: { summative: true, questions: detail },
   });
+
+  // Analytics substrate: item-level summative answers (learners only) — these
+  // are the strongest mastery evidence there is.
+  if (me.role === "STUDENT") {
+    for (const r of results) {
+      logEvent({
+        type: EVENT.QUIZ_ANSWER,
+        userId: me.id,
+        classId: me.classId,
+        lessonId: lesson.id,
+        questionId: r.id,
+        correct: r.correct ?? r.awarded >= r.max,
+        chosen: (answers || {})[r.id] ?? null,
+        source: "summative",
+      });
+    }
+  }
 
   return NextResponse.json({ passed, score, awarded, max, status, results });
 }

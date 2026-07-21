@@ -1,4 +1,4 @@
-export type Feature = "tutor" | "grade" | "generate" | "runjava";
+export type Feature = "tutor" | "grade" | "generate" | "runjava" | "oversee";
 
 export type Provider = "stub" | "gemini" | "groq" | "openrouter" | "anthropic" | "vertex";
 

@@ -1,133 +1,158 @@
-// Disposable demo data for testing the mastery estimator (STUDENT-MODEL.md §3–4).
+// Disposable demo PEOPLE for the AI overseer + progress views. Runs on the REAL
+// curriculum (lessons 2.1–2.4, enriched by enrich-lessons.mjs — run that first).
 //
-//   node --env-file=.env scripts/seed-mastery.mjs         # seed (wipes prior demo first)
-//   node --env-file=.env scripts/seed-mastery.mjs clean   # remove all demo data
+//   node --env-file=.env scripts/seed-mastery.mjs         # seed (re-runs clean first)
+//   node --env-file=.env scripts/seed-mastery.mjs clean   # remove the demo class & students
 //
-// Creates an isolated demo chapter/lesson/class so it's trivial to delete, and
-// five students with KNOWN stories — so you can check the system's read against
-// the truth built in:
-//   Ada   — strong everywhere
-//   Ben   — guessing (~50%)            → weak everywhere
-//   Cara  — nails loops, fails recursion → the showcase: one specific gap
-//   Dan   — barely answered anything   → "not enough evidence" everywhere
-//   Eve   — bombed weeks ago, aces it now → recency: recent mastery wins
+// Five students with KNOWN stories, each leaving a full activity trail
+// (lesson views, item answers, tutor questions, code runs) so the overseer has
+// a real record to read:
+//   Ada  — strong everywhere, works steadily
+//   Ben  — guessing (~50%), asks the tutor for answers
+//   Cara — strong on 2.1–2.3, collapses on 2.4 arithmetic; her tutor questions
+//          say exactly why (integer division + modulo confusion)
+//   Dan  — opened 2.1 once, answered 2 questions, vanished
+//   Eve  — bombed 2.1–2.2 seven weeks ago, aces everything recently
 
 import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
 const CLASS_NAME = "Demo — Mastery Test";
-const CHAPTER_TITLE = "__DEMO_MASTERY__";
 const DAY = 24 * 3600 * 1000;
+const LESSONS = ["2.1", "2.2", "2.3", "2.4"];
 
 async function clean() {
   const cls = await prisma.class.findFirst({ where: { name: CLASS_NAME } });
   if (cls) {
     const students = await prisma.user.findMany({ where: { classId: cls.id }, select: { id: true } });
     const ids = students.map((s) => s.id);
-    if (ids.length) await prisma.event.deleteMany({ where: { userId: { in: ids } } });
+    if (ids.length) {
+      await prisma.event.deleteMany({ where: { userId: { in: ids } } });
+      await prisma.studentInsight.deleteMany({ where: { userId: { in: ids } } });
+    }
     await prisma.user.deleteMany({ where: { classId: cls.id } });
     await prisma.class.delete({ where: { id: cls.id } });
   }
-  // deleting the demo chapter cascades lesson → skill → questionSkill
-  await prisma.chapter.deleteMany({ where: { title: CHAPTER_TITLE } });
+  // legacy synthetic chapter from the first demo round
+  await prisma.chapter.deleteMany({ where: { title: "__DEMO_MASTERY__" } });
   console.log("· cleaned prior demo data");
 }
 
 async function seed() {
   await clean();
 
-  // ── isolated curriculum ──
-  const chapter = await prisma.chapter.create({ data: { order: 9999, title: CHAPTER_TITLE } });
-  const lesson = await prisma.lesson.create({
-    data: {
-      chapterId: chapter.id,
-      code: "DEMO.1",
-      order: 1,
-      title: "Demo lesson — loops, modulo, recursion",
-      goal: "seed data for mastery testing",
-      blocks: [],
-      exercise: {},
-      quizBank: [],
-    },
+  // real lessons + their tagged questions, grouped lesson → skill → questionIds
+  const lessons = await prisma.lesson.findMany({
+    where: { code: { in: LESSONS } },
+    include: { skills: { include: { questionSkills: true } } },
   });
-
-  // ── skills (with difficulty) + synthetic tagged questions ──
-  const defs = [
-    { key: "loop", statement: "trace a for-loop", difficulty: 2 },
-    { key: "mod", statement: "apply the modulo operator", difficulty: 2 },
-    { key: "nest", statement: "predict nested-loop output", difficulty: 3 },
-    { key: "rec", statement: "trace a recursive call", difficulty: 4 },
-  ];
-  const NQ = 6; // questions per skill — enough evidence that the story is clear, not noisy
-  const questions = {}; // key -> [questionId,...]
-  for (const d of defs) {
-    const skill = await prisma.skill.create({
-      data: { lessonId: lesson.id, statement: d.statement, difficulty: d.difficulty, origin: "ai", confidence: 0.6 },
-    });
-    questions[d.key] = [];
-    for (let i = 0; i < NQ; i++) {
-      const questionId = `demo_${d.key}_${i}`;
-      questions[d.key].push(questionId);
-      await prisma.questionSkill.create({ data: { questionId, skillId: skill.id, origin: "ai" } });
+  const byCode = new Map(lessons.map((l) => [l.code, l]));
+  for (const code of LESSONS) {
+    const l = byCode.get(code);
+    if (!l || !l.skills.length || !l.skills.some((s) => s.questionSkills.length)) {
+      console.error(`✗ lesson ${code} has no tagged questions — run enrich-lessons.mjs first`);
+      process.exit(1);
     }
   }
 
-  // ── class + students ──
   const cls = await prisma.class.create({
     data: { name: CLASS_NAME, joinCode: "DEMO" + Math.random().toString(36).slice(2, 6).toUpperCase() },
   });
 
-  const answer = (userId, questionId, correct, daysAgo) =>
+  const ev = (userId, type, daysAgo, payload) =>
     prisma.event.create({
-      data: {
-        type: "quiz.answer",
-        userId,
-        classId: cls.id,
-        at: new Date(Date.now() - daysAgo * DAY),
-        payload: { v: 1, questionId, correct, lessonId: lesson.id, source: "practice", chosen: correct ? 0 : 1 },
-      },
+      data: { type, userId, classId: cls.id, at: new Date(Date.now() - daysAgo * DAY), payload: { v: 1, ...payload } },
     });
 
-  // p = target correct rate per skill. DETERMINISTIC (exactly round(p·n) correct)
-  // so the demo always tells the intended story — no unlucky RNG runs.
-  async function play(userId, perSkillProb, opts = {}) {
-    for (const key of Object.keys(questions)) {
-      const p = perSkillProb[key];
-      if (p === undefined) continue; // skill left untouched → "not enough evidence"
-      const qs = questions[key];
-      const correctCount = Math.round(p * qs.length);
-      for (let i = 0; i < qs.length; i++) {
-        const isCorrect = i < correctCount;
-        if (opts.improving) {
-          await answer(userId, qs[i], false, 55 + (i % 5)); // bombed weeks ago
-          await answer(userId, qs[i], true, 1 + (i % 3)); // aces recently
-        } else {
-          await answer(userId, qs[i], isCorrect, 1 + (i % 5));
-        }
+  const view = (u, l, d) => ev(u, "lesson.view", d, { lessonId: l.id, code: l.code });
+  const run = (u, l, d, ok = true) => ev(u, "code.run", d, { lessonCode: l.code, compiled: ok });
+  const ask = (u, l, d, q) => ev(u, "tutor.message", d, { lessonId: l.id, lessonCode: l.code, question: q, reply: "(tutor gave a guiding hint)" });
+
+  // answer every tagged question of a lesson at accuracy p (deterministic:
+  // exactly round(p·n) correct per skill), spread over recent days
+  async function work(userId, code, p, { daysAgo = null, source = "practice" } = {}) {
+    const l = byCode.get(code);
+    for (const skill of l.skills) {
+      const qids = skill.questionSkills.map((qs) => qs.questionId);
+      const nCorrect = Math.round(p * qids.length);
+      for (let i = 0; i < qids.length; i++) {
+        const d = daysAgo ?? 1 + ((i * 3) % 6);
+        await ev(userId, "quiz.answer", d, {
+          questionId: qids[i],
+          correct: i < nCorrect,
+          lessonId: l.id,
+          source,
+          chosen: i < nCorrect ? 0 : 1,
+        });
       }
     }
   }
 
   const mk = (name) => prisma.user.create({ data: { name, role: "STUDENT", classId: cls.id } });
 
-  const ada = await mk("Ada (strong)");
-  await play(ada.id, { loop: 0.92, mod: 0.92, nest: 0.9, rec: 0.88 });
+  // ── Ada: strong and steady ──
+  const ada = await mk("Ada Chen");
+  for (const [i, code] of LESSONS.entries()) {
+    const l = byCode.get(code);
+    await view(ada.id, l, 8 - i * 2);
+    await view(ada.id, l, 2);
+    await work(ada.id, code, 0.95);
+    await run(ada.id, l, 3);
+  }
+  await ask(ada.id, byCode.get("2.4"), 2, "Is there a shortcut for checking if a number is divisible by both 3 and 5?");
 
-  const ben = await mk("Ben (guessing)");
-  await play(ben.id, { loop: 0.5, mod: 0.5, nest: 0.5, rec: 0.5 });
+  // ── Ben: guessing, answer-hunting ──
+  const ben = await mk("Ben Okafor");
+  for (const code of LESSONS) {
+    const l = byCode.get(code);
+    await view(ben.id, l, 5);
+    await work(ben.id, code, 0.5);
+  }
+  await ask(ben.id, byCode.get("2.2"), 4, "whats the answer to the quiz");
+  await ask(ben.id, byCode.get("2.4"), 2, "can you just tell me what 7/2 is in java");
+  await run(ben.id, byCode.get("2.2"), 3, false);
 
-  const cara = await mk("Cara (recursion gap)");
-  await play(cara.id, { loop: 0.92, mod: 0.9, nest: 0.88, rec: 0.15 });
+  // ── Cara: strong until 2.4, where arithmetic falls apart ──
+  const cara = await mk("Cara Ilyes");
+  for (const code of ["2.1", "2.2", "2.3"]) {
+    const l = byCode.get(code);
+    await view(cara.id, l, 9);
+    await work(cara.id, code, 0.95);
+    await run(cara.id, l, 6);
+  }
+  const l24 = byCode.get("2.4");
+  await view(cara.id, l24, 3);
+  await view(cara.id, l24, 1);
+  await work(cara.id, "2.4", 0.2);
+  await ask(cara.id, l24, 2, "why is 7/2 equal to 3 and not 3.5?? that makes no sense");
+  await ask(cara.id, l24, 1, "I still don't get what % actually does, is it percent?");
+  await run(cara.id, l24, 1, true);
 
-  const dan = await mk("Dan (barely started)");
-  await answer(dan.id, questions.loop[0], true, 1); // just two answers total
-  await answer(dan.id, questions.mod[0], true, 1);
+  // ── Dan: barely started ──
+  const dan = await mk("Dan Petrov");
+  const l21 = byCode.get("2.1");
+  await view(dan.id, l21, 12);
+  const danQs = l21.skills[0].questionSkills.map((qs) => qs.questionId).slice(0, 2);
+  for (const [i, qid] of danQs.entries()) {
+    await ev(dan.id, "quiz.answer", 12, { questionId: qid, correct: i === 0, lessonId: l21.id, source: "practice", chosen: i === 0 ? 0 : 1 });
+  }
 
-  const eve = await mk("Eve (improving)");
-  await play(eve.id, { loop: 1, mod: 1, nest: 1, rec: 1 }, { improving: true });
+  // ── Eve: rough start seven weeks ago, excellent now ──
+  const eve = await mk("Eve Almeida");
+  for (const code of ["2.1", "2.2"]) {
+    await work(eve.id, code, 0.15, { daysAgo: 49 });
+    await ask(eve.id, byCode.get(code), 49, "I am completely lost on this lesson");
+  }
+  for (const code of LESSONS) {
+    const l = byCode.get(code);
+    await view(eve.id, l, 4);
+    await work(eve.id, code, 0.95);
+  }
+  await run(eve.id, byCode.get("2.3"), 2);
+  await ask(eve.id, byCode.get("2.4"), 1, "I used % to build FizzBuzz and it worked! Is that the standard way?");
 
-  console.log(`✓ seeded "${CLASS_NAME}" (join ${cls.joinCode}) with 5 students + ${defs.length} skills`);
-  console.log(`  open: /class/${cls.id}/mastery`);
+  console.log(`✓ seeded "${CLASS_NAME}" (join ${cls.joinCode}) — 5 students with full activity on lessons ${LESSONS.join(", ")}`);
+  console.log(`  teacher view: /class/${cls.id}/mastery`);
 }
 
 const mode = process.argv[2];

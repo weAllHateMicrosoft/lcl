@@ -29,6 +29,7 @@ const FEATURES: { key: string; label: string }[] = [
   { key: "tutor", label: "Tutor chat" },
   { key: "grade", label: "Grading / feedback" },
   { key: "generate", label: "Question generation" },
+  { key: "oversee", label: "Student oversight (AI briefs)" },
 ];
 
 export default function SettingsForm({ initial }: { initial: ClientCfg }) {

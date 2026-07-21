@@ -39,6 +39,7 @@ export default function Nav({ me, cost, unread = 0 }: { me: MiniUser | null; cos
             {me.role === "STUDENT" ? (
               <>
                 <Link href="/lessons" className={on("/lessons")}>My lessons</Link>
+                <Link href="/progress" className={on("/progress")}>My progress</Link>
                 <Link href="/tests" className={on("/tests")}>My tests</Link>
                 <Link href="/gradebook" className={on("/gradebook")}>My grades</Link>
               </>

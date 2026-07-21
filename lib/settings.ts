@@ -46,7 +46,7 @@ export async function setSetting(key: string, value: unknown): Promise<void> {
 
 // ─── LLM config: a list of keys (rotation lanes) + per-feature model + prompts ─
 
-export type PromptKey = "tutor" | "grade" | "generate";
+export type PromptKey = "tutor" | "grade" | "generate" | "oversee";
 
 export interface StoredKey {
   id: string;
@@ -134,9 +134,9 @@ export async function saveLLMConfig(input: {
     keys.push({ id: row.id && byId.has(row.id) ? row.id : rid(), provider: row.provider, model: row.model || "", label: row.label, region: row.region || undefined, encryptedKey });
   }
   const models: Partial<Record<Feature, string>> = {};
-  for (const f of ["tutor", "grade", "generate", "runjava"] as Feature[]) if (input.models?.[f]) models[f] = input.models[f];
+  for (const f of ["tutor", "grade", "generate", "runjava", "oversee"] as Feature[]) if (input.models?.[f]) models[f] = input.models[f];
   const prompts: Partial<Record<PromptKey, string>> = {};
-  for (const p of ["tutor", "grade", "generate"] as PromptKey[]) if (input.prompts?.[p]?.trim()) prompts[p] = input.prompts[p];
+  for (const p of ["tutor", "grade", "generate", "oversee"] as PromptKey[]) if (input.prompts?.[p]?.trim()) prompts[p] = input.prompts[p];
 
   await setSetting("llm", { keys, models, prompts });
 }

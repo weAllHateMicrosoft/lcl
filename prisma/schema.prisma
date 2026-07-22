@@ -51,6 +51,13 @@ model Lesson {
   // Shown to students, and fed to the AI tutor + question generator as scope.
   objectives Json?
 
+  // The interactive lesson experience: { v, steps: FlowStep[] } — a sequence of
+  // do-first steps (run/tweak/predict/fix/arrange/write) with near-zero text.
+  // When set, students get the step player by default; `blocks` remains the
+  // "textbook version" for readers. Predict answers are stripped server-side
+  // (/api/lesson/flow) — same invariant as every other quiz.
+  flow Json?
+
   // Unpublished working copy: { title, goal, objectives, blocks, exercise, quizBank }.
   // Students always read the live fields above; the editor edits this until
   // the owner hits Publish.

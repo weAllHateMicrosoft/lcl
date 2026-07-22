@@ -11,8 +11,9 @@ import { logEvent, EVENT } from "@/lib/events";
 export async function POST(req: Request) {
   const me = await currentUser();
   if (!me) return NextResponse.json({ error: "not signed in" }, { status: 401 });
-  if (!rateLimit(`run:${me.id}`, 10, 60 * 1000)) {
-    return NextResponse.json({ compiled: false, stdout: "", error: "Slow down — max 10 runs per minute." });
+  // Interactive flow lessons are run-heavy by design (every step is a ▶ press).
+  if (!rateLimit(`run:${me.id}`, 20, 60 * 1000)) {
+    return NextResponse.json({ compiled: false, stdout: "", error: "Slow down — max 20 runs per minute." });
   }
 
   const { code, stdin, wrap, lessonCode } = await req.json();

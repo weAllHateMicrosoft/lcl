@@ -17,6 +17,7 @@ export const EVENT = {
   LESSON_VIEW: "lesson.view",
   BLOCK_DWELL: "block.dwell",
   QUIZ_ANSWER: "quiz.answer", // the load-bearing one: item-level, everywhere
+  FLOW_STEP: "flow.step", // one interactive-lesson step completed/answered
   CODE_RUN: "code.run",
   TUTOR_MESSAGE: "tutor.message",
   HINT_REVEAL: "hint.reveal",

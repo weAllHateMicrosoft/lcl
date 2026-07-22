@@ -565,3 +565,38 @@ pre.flowcode.ro { margin: 0; }
 .linebtn:hover { border-color: var(--ink); }
 .linebtn.placed { border-color: var(--accent); }
 .linebtn .n { display: inline-block; width: 18px; height: 18px; border-radius: 99px; background: var(--accent); color: #fff; font-size: 11px; text-align: center; line-height: 18px; margin-right: 8px; }
+
+/* flow: spot / trace / fill / bucket / match / explain */
+.flowspot { display: flex; flex-direction: column; gap: 3px; }
+.spotline { display: flex; gap: 10px; align-items: center; text-align: left; font-family: var(--mono); font-size: 14px; padding: 7px 12px; border-radius: 8px; border: 1.5px solid transparent; background: #14171c; color: #e6e1d6; cursor: pointer; }
+.spotline:hover:not(:disabled) { border-color: var(--accent); }
+.spotline .ln { color: #6b7280; font-size: 11px; width: 18px; }
+.spotline pre { margin: 0; font-family: inherit; }
+.spotline.right { border-color: var(--accent); background: #17241b; }
+.spotline.wrong { border-color: #b3352e; animation: flowshake .3s; }
+.spotline.dim { opacity: .5; }
+.fillslot { display: inline-block; min-width: 34px; text-align: center; border: 1.5px dashed var(--muted); border-radius: 6px; padding: 0 8px; margin: 0 2px; color: #eab308; }
+.fillslot.set { border-style: solid; border-color: var(--violet); color: #cdc3f0; }
+.fillslot.right { border-color: var(--accent); color: #9fe0b5; }
+.fillslot.wrong { border-color: #b3352e; color: #f2a59e; }
+.fillrow { display: flex; gap: 6px; align-items: center; margin-top: 8px; flex-wrap: wrap; }
+.bchip { font-family: var(--mono); font-size: 13px; padding: 6px 12px; border-radius: 99px; border: 1.5px solid var(--line); background: transparent; color: inherit; cursor: pointer; }
+.bchip:hover { border-color: var(--ink); }
+.bchip.on { border-color: var(--violet); background: rgba(90,74,158,.12); }
+.bchip.hintright { border-color: var(--accent); }
+.flowbuckets { margin-top: 8px; }
+.bucketrow { display: flex; gap: 10px; align-items: center; padding: 7px 10px; border-radius: 8px; flex-wrap: wrap; }
+.bucketrow .itext { font-family: var(--mono); font-size: 14px; flex: 1; min-width: 140px; }
+.bucketrow .bchips { display: flex; gap: 6px; flex-wrap: wrap; }
+.bucketrow.right { background: rgba(46,125,80,.08); }
+.bucketrow.wrong { background: rgba(179,53,46,.07); }
+.flowmatch { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+.flowmatch .mcol { display: flex; flex-direction: column; gap: 6px; }
+.flowmatch .btn { grid-column: 1 / -1; justify-self: start; }
+.mchip { text-align: left; font-family: var(--mono); font-size: 13px; padding: 9px 12px; border-radius: 8px; border: 1.5px solid var(--line); background: transparent; color: inherit; cursor: pointer; }
+.mchip:hover:not(:disabled) { border-color: var(--ink); }
+.mchip.sel { border-color: var(--violet); background: rgba(90,74,158,.12); }
+.mchip.paired { border-color: var(--accent); }
+.mchip:disabled { opacity: .5; cursor: default; }
+.flowtracer { margin-top: 10px; }
+.flowexplain { margin-top: 6px; }

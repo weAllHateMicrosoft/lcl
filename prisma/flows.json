@@ -20,15 +20,15 @@
             "points": [
               {
                 "label": "title, menu, prompt",
-                "text": "A title at the top, two choices, and a line asking the player to pick one."
+                "text": "We will create a title at the top, two choices, and a line asking the player to pick one."
               },
               {
                 "label": "\"*** DUNGEON QUEST ***\"",
-                "text": "Every line a program has ever printed is just text it was told to print, character for character."
+                "text": "A program always prints texts to the screen exactly as told, character for character."
               },
               {
                 "label": "System.out.println",
-                "text": "One command builds the entire screen. You meet its no-newline twin later in the lesson."
+                "text": "And we will use this command to build the entire screen."
               }
             ]
           },
@@ -41,19 +41,15 @@
             "points": [
               {
                 "label": "System.out.println",
-                "text": "Spelled exactly like that. Capital S, everything else lowercase, no spaces."
+                "text": "When writing code, spell it exactly as this. Same capitalization, punctuation, and spacing."
               },
               {
                 "label": "the quotes",
-                "text": "Whatever sits between the double quotes is what appears. Java does not read it — it just prints it."
-              },
-              {
-                "label": "the quotes vanish",
-                "text": "They mark where the text starts and stops. They never show up in the output."
+                "text": "Java prints only prints text inside the quotes (\"\")."
               },
               {
                 "label": "the semicolon",
-                "text": "Ends the instruction. Every line like this needs one."
+                "text": "Ends the instruction. Every line like this needs one for Java to differentiate between lines."
               }
             ]
           },
@@ -82,7 +78,7 @@
               },
               {
                 "label": "ln",
-                "text": "The ln on the end means \"then move to the next line\". That is why they stack instead of running together."
+                "text": "The ln on the end means \"then move to the next line\". Without this, all text would be on the same line."
               },
               {
                 "label": "the spaces count",
@@ -123,21 +119,13 @@
           {
             "id": "p_blank",
             "kind": "teach",
-            "instruction": "A gap under the title makes it readable.",
+            "instruction": "We add a gap under the title to make it more readable.",
             "code": "System.out.println(\"*** DUNGEON QUEST ***\");\nSystem.out.println(\"\");\nSystem.out.println(\"  1. New game\");\nSystem.out.println(\"  2. Quit\");",
             "output": "*** DUNGEON QUEST ***\n\n  1. New game\n  2. Quit",
             "points": [
               {
                 "label": "println(\"\")",
                 "text": "Nothing between the quotes, so it prints nothing — then moves to the next line anyway."
-              },
-              {
-                "label": "\"\"",
-                "text": "Zero characters printed, and the line still ends. That is a blank line."
-              },
-              {
-                "label": "title, gap, menu",
-                "text": "Same words, easier to read. Where the gaps go is a decision you make, not something Java does for you."
               }
             ]
           },
@@ -153,16 +141,8 @@
                 "text": "Prints and STAYS on the line. The cursor waits right after the text."
               },
               {
-                "label": "Choose 1-2: 2",
-                "text": "print keeps the answer on the question line. println would drop it below."
-              },
-              {
                 "label": "the space",
                 "text": "The space after the colon is inside the quotes, so the answer will not touch the question mark."
-              },
-              {
-                "label": "print vs println",
-                "text": "Identical commands apart from one thing: println ends the line, print leaves it open."
               }
             ]
           },
@@ -200,10 +180,6 @@
             "code": "System.out.println(\"one\");\nSystem.out.print(\"two\");\nSystem.out.println(\"three\");",
             "output": "one\ntwothree",
             "points": [
-              {
-                "label": "System.out.println",
-                "text": "Capital S, then out, then println all in lowercase. printLine, System.println and bare print do not exist."
-              },
               {
                 "label": "println",
                 "text": "Prints, then ENDS the line."
